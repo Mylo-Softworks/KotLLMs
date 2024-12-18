@@ -3,6 +3,8 @@ package com.mylosoftworks.kotllms.chat
 class ChatDef<M : ChatMessage<M>> : Cloneable {
     var messages = mutableListOf<M>()
 
+    fun lastMessageImages() = messages.last().getAttachedImages()
+
     fun addMessage(message: M) {
         messages.add(message)
     }

@@ -66,7 +66,7 @@ class BiConvertedStringFlag<T>(val convert: (T) -> String, val unConvert: (Strin
 
 class BiConvertedJsonFlag<T>(val convert: (T) -> JsonElement, val unConvert: (JsonElement) -> T) {
     operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
-        return unConvert(thisRef.setFlags.getOrDefault(property.name, null) as JsonElement)
+        return (thisRef.setFlags.getOrDefault(property.name, null) as JsonElement?)?.let { unConvert(it) }
     }
 
     operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {

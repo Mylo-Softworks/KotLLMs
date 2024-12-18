@@ -139,19 +139,18 @@ bot:
     // Assuming Llama 3 is loaded with CLIP
     @Test
     fun testImage() {
+        val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
+
         val exampleChat = ChatDef<BasicTemplatedChatMessage>()
         exampleChat.addMessage(BasicTemplatedChatMessage().init {
             content = "What do you see in this image?"
             role = "user"
+            images = listOf(image)
         })
         api.settings.template = Llama3Template()
 
-        val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
-
         val result = runBlocking {
-            api.chatGen(exampleChat, KoboldCPPGenFlags().init {
-                images = listOf(image)
-            })
+            api.chatGen(exampleChat)
         }
 
         println(result.getText())

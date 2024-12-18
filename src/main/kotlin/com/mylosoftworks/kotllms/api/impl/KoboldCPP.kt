@@ -137,9 +137,12 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     ): GenerationResult {
         if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
         val validFlags = flags ?: KoboldCPPGenFlags()
+
         validFlags.trim_stop = validFlags.trim_stop ?: true
         validFlags.prompt = settings.template!!.formatChat(chatDef)
         validFlags.stop_sequence = settings.template!!.stopStrings()
+        if (validFlags.images == null) validFlags.images = chatDef.lastMessageImages()
+
         return rawGen(validFlags)
     }
 

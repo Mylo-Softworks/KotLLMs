@@ -1,5 +1,6 @@
 package com.mylosoftworks.kotllms.chat
 
+import java.awt.image.BufferedImage
 import kotlin.reflect.KProperty
 
 /**
@@ -11,6 +12,10 @@ abstract class ChatMessage<T : ChatMessage<T>> {
     operator fun get(name: String) = setFlags[name]
 
     abstract fun setTextContent(content: String) // Text content implementation, usually involves setting a flag
+
+    open fun getAttachedImages(): List<BufferedImage> {
+        return listOf()
+    }
 
     fun init(init: T.() -> Unit): T {
         init(this as T)
@@ -24,6 +29,10 @@ abstract class ChatMessage<T : ChatMessage<T>> {
 open class BasicTemplatedChatMessage : ChatMessage<BasicTemplatedChatMessage>() { // Open class, since you can add extra message variables
     var role by MessageFlag<String>()
     var content by MessageFlag<String>()
+
+    var images = listOf<BufferedImage>()
+
+    override fun getAttachedImages(): List<BufferedImage> = images
 
     override fun setTextContent(content: String) {
         this.content = content
