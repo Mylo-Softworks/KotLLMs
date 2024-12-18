@@ -10,4 +10,6 @@ import com.mylosoftworks.kotllms.api.Flags
  */
 interface ChatGen<F: Flags<*>, C : ChatDef<*>> {
     suspend fun chatGen(chatDef: C, flags: F? = null): GenerationResult
+
+    suspend fun supportsChat(): Boolean
 }

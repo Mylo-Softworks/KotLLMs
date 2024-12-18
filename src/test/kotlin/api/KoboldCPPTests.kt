@@ -6,6 +6,10 @@ import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenerationResultsStreamed
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPStreamChunk
+import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
+import com.mylosoftworks.kotllms.chat.ChatDef
+import com.mylosoftworks.kotllms.chat.ChatMessage
+import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 
@@ -96,5 +100,69 @@ class KoboldCPPTests {
                 if (it.isLastToken()) println() // End
             }
         }
+    }
+
+    @Test
+    fun testTemplate() {
+        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
+        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+            content = "Hi!"
+            role = "bot"
+        })
+        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+            content = "What's up?"
+            role = "user"
+        })
+        val template = ChatTemplateDSL {
+"""
+This is an example chat template
+
+This is the beginning of the chat:
+${messages.joinToString("\n") {message -> message["role"]?.let { "$it: " } + message["content"]?.let { it } }}
+bot:
+""".trimIndent()
+        }
+
+        assert(template.formatChat(exampleChat) == """
+            This is an example chat template
+
+            This is the beginning of the chat:
+            bot: Hi!
+            user: What's up?
+            bot:
+        """.trimIndent()) {"Template didn't match test case"}
+    }
+
+    @Test
+    fun testChat() {
+        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
+        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+            content = "Hi!"
+            role = "bot"
+        })
+        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+            content = "What's up?"
+            role = "user"
+        })
+        api.settings.template = ChatTemplateDSL {
+"""
+This is an example chat template
+
+This is the beginning of the chat:
+${messages.joinToString("\n") {message -> message["role"]?.let { "$it: " } + message["content"]?.let { it } }}
+bot:
+""".trimIndent()
+        }
+
+        val result = runBlocking {
+            api.chatGen(exampleChat, KoboldCPPGenFlags().init {
+                max_length = 200
+
+                stop_sequence = arrayOf("bot:", "user:")
+                trim_stop = true
+            })
+        }
+
+        println(result.getText())
     }
 }

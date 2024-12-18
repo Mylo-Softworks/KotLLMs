@@ -1,6 +1,9 @@
 package com.mylosoftworks.kotllms.api.impl
 
 import com.mylosoftworks.kotllms.api.*
+import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
+import com.mylosoftworks.kotllms.chat.ChatDef
+import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.stripTrailingSlash
 import io.ktor.client.*
@@ -20,7 +23,7 @@ import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags>,
-    RawGen<KoboldCPPGenFlags> {
+    RawGen<KoboldCPPGenFlags>, ChatGen<KoboldCPPGenFlags, ChatDef<BasicTemplatedChatMessage>> {
     val client = HttpClient(Java) {
         install(ContentNegotiation) {
             json()
@@ -123,14 +126,31 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     suspend fun sendAbort() {
         makeHttpPost("/api/extra/abort", KoboldCPPGenFlags())
     }
+
+    override suspend fun chatGen(
+        chatDef: ChatDef<BasicTemplatedChatMessage>,
+        flags: KoboldCPPGenFlags?
+    ): GenerationResult {
+        if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
+        val validFlags = flags ?: KoboldCPPGenFlags()
+        validFlags.prompt = settings.template!!.formatChat(chatDef)
+        return rawGen(validFlags)
+    }
+
+    override suspend fun supportsChat() = settings.chatTemplateSetup()
+
 }
 
-class KoboldCPPSettings(url: String = "http://localhost:5001") : Settings() {
+class KoboldCPPSettings(url: String = "http://localhost:5001", var template: ChatTemplate? = null) : Settings() {
     var url: String = url
         set(value) { field = stripTrailingSlash(value) }
 
     fun applyToRequest(builder: HttpRequestBuilder) {
 
+    }
+
+    fun chatTemplateSetup(): Boolean {
+        return template != null
     }
 }
 
@@ -148,6 +168,8 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
     var top_k by Flag<Int>()
     var top_p by Flag<Float>()
     var typical by Flag<Float>()
+    var stop_sequence by ConvertedFlag<Array<String>, JsonElement>() { Json.encodeToJsonElement(it) }
+    var trim_stop by Flag<Boolean>()
 
     var stream: Boolean = false // Not an actual flag, but changes behavior
 
