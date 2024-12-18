@@ -1,11 +1,13 @@
 package com.mylosoftworks.kotllms.api.impl
 
 import com.mylosoftworks.kotllms.api.*
+import com.mylosoftworks.kotllms.base64ToImage
 import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.stripTrailingSlash
+import com.mylosoftworks.kotllms.toBase64
 import io.ktor.client.*
 import io.ktor.client.engine.java.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -19,6 +21,8 @@ import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
+import java.awt.Image
+import java.awt.image.BufferedImage
 import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
@@ -133,7 +137,9 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     ): GenerationResult {
         if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
         val validFlags = flags ?: KoboldCPPGenFlags()
+        validFlags.trim_stop = validFlags.trim_stop ?: true
         validFlags.prompt = settings.template!!.formatChat(chatDef)
+        validFlags.stop_sequence = settings.template!!.stopStrings()
         return rawGen(validFlags)
     }
 
@@ -168,8 +174,12 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
     var top_k by Flag<Int>()
     var top_p by Flag<Float>()
     var typical by Flag<Float>()
-    var stop_sequence by ConvertedFlag<Array<String>, JsonElement>() { Json.encodeToJsonElement(it) }
+    var stop_sequence by BiConvertedJsonFlag<List<String>>({ Json.encodeToJsonElement(it) },
+        { it.jsonArray.map { it.jsonPrimitive.content }.toList() })
     var trim_stop by Flag<Boolean>()
+
+    var images by BiConvertedJsonFlag<List<BufferedImage>>({ Json.encodeToJsonElement(it.map { it.toBase64() }) },
+        { it.jsonArray.map { base64ToImage(it.jsonPrimitive.content) }.toList() })
 
     var stream: Boolean = false // Not an actual flag, but changes behavior
 

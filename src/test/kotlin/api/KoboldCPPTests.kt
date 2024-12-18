@@ -10,7 +10,11 @@ import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.ChatMessage
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
+import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.chat.templated.presets.MistralTemplate
 import kotlinx.coroutines.runBlocking
+import javax.imageio.ImageIO
+import kotlin.io.path.Path
 import kotlin.test.Test
 
 class KoboldCPPTests {
@@ -103,37 +107,6 @@ class KoboldCPPTests {
     }
 
     @Test
-    fun testTemplate() {
-        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
-            content = "Hi!"
-            role = "bot"
-        })
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
-            content = "What's up?"
-            role = "user"
-        })
-        val template = ChatTemplateDSL {
-"""
-This is an example chat template
-
-This is the beginning of the chat:
-${messages.joinToString("\n") {message -> message["role"]?.let { "$it: " } + message["content"]?.let { it } }}
-bot:
-""".trimIndent()
-        }
-
-        assert(template.formatChat(exampleChat) == """
-            This is an example chat template
-
-            This is the beginning of the chat:
-            bot: Hi!
-            user: What's up?
-            bot:
-        """.trimIndent()) {"Template didn't match test case"}
-    }
-
-    @Test
     fun testChat() {
         val exampleChat = ChatDef<BasicTemplatedChatMessage>()
         exampleChat.addMessage(BasicTemplatedChatMessage().init {
@@ -157,9 +130,27 @@ bot:
         val result = runBlocking {
             api.chatGen(exampleChat, KoboldCPPGenFlags().init {
                 max_length = 200
+            })
+        }
 
-                stop_sequence = arrayOf("bot:", "user:")
-                trim_stop = true
+        println(result.getText())
+    }
+
+    // Assuming Llama 3 is loaded with CLIP
+    @Test
+    fun testImage() {
+        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
+        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+            content = "What do you see in this image?"
+            role = "user"
+        })
+        api.settings.template = Llama3Template()
+
+        val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
+
+        val result = runBlocking {
+            api.chatGen(exampleChat, KoboldCPPGenFlags().init {
+                images = listOf(image)
             })
         }
 

@@ -7,4 +7,5 @@ import com.mylosoftworks.kotllms.chat.ChatDef
  */
 abstract class ChatTemplate {
     abstract fun formatChat(def: ChatDef<*>): String
+    abstract fun stopStrings(): List<String>
 }

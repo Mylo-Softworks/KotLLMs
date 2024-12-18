@@ -1,6 +1,7 @@
 package com.mylosoftworks.kotllms.api
 
 import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
+import kotlinx.serialization.json.JsonElement
 import kotlin.reflect.KProperty
 
 /**
@@ -46,6 +47,34 @@ class ConvertedFlag<T, V>(val convert: (T) -> V) {
             return
         }
         thisRef.setFlags[property.name] = convert(value as T)!!
+    }
+}
+
+class BiConvertedStringFlag<T>(val convert: (T) -> String, val unConvert: (String) -> T) {
+    operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
+        return unConvert(thisRef.setFlags.getOrDefault(property.name, null).toString())
+    }
+
+    operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
+        if (value == null) {
+            thisRef.setFlags.remove(property.name)
+            return
+        }
+        thisRef.setFlags[property.name] = convert(value)
+    }
+}
+
+class BiConvertedJsonFlag<T>(val convert: (T) -> JsonElement, val unConvert: (JsonElement) -> T) {
+    operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
+        return unConvert(thisRef.setFlags.getOrDefault(property.name, null) as JsonElement)
+    }
+
+    operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
+        if (value == null) {
+            thisRef.setFlags.remove(property.name)
+            return
+        }
+        thisRef.setFlags[property.name] = convert(value)
     }
 }
 
