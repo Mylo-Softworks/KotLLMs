@@ -43,7 +43,7 @@ bot:
         val exampleChat = ChatDef<BasicTemplatedChatMessage>()
         exampleChat.addMessage(BasicTemplatedChatMessage().init {
             content = "Hi!"
-            role = "bot"
+            role = "assistant"
         })
         exampleChat.addMessage(BasicTemplatedChatMessage().init {
             content = "What's up?"

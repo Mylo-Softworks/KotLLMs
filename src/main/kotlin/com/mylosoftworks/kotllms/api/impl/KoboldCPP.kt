@@ -1,5 +1,6 @@
 package com.mylosoftworks.kotllms.api.impl
 
+import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.*
 import com.mylosoftworks.kotllms.base64ToImage
 import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
@@ -180,6 +181,7 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
     var stop_sequence by BiConvertedJsonFlag<List<String>>({ Json.encodeToJsonElement(it) },
         { it.jsonArray.map { it.jsonPrimitive.content }.toList() })
     var trim_stop by Flag<Boolean>()
+    var bypass_eos by Flag<Boolean>() // Set to false to prevent early stopping
 
     var images by BiConvertedJsonFlag<List<BufferedImage>>({ Json.encodeToJsonElement(it.map { it.toBase64() }) },
         { it.jsonArray.map { base64ToImage(it.jsonPrimitive.content) }.toList() })
@@ -193,6 +195,10 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
             return
         }
         setFlags["grammar"] = gbnf
+    }
+
+    override fun applyGrammar(grammar: GBNF) {
+        this.grammar = grammar
     }
 }
 

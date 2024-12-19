@@ -18,6 +18,8 @@ abstract class Flags<T : Flags<T>> {
         init(this as T)
         return this
     }
+
+    open fun applyGrammar(grammar: GBNF): Unit = error("")
 }
 
 class Flag<T> {
