@@ -9,7 +9,7 @@ class ChatDef<M : ChatMessage<M>> : Cloneable {
         messages.add(message)
     }
 
-    fun <T : ChatDef<M>> subChat(count: Int, prefix: MutableList<M>, suffix: MutableList<M>): T {
+    fun <T : ChatDef<M>> subChat(count: Int, prefix: MutableList<M> = mutableListOf(), suffix: MutableList<M> = mutableListOf()): T {
         val clone = this.clone() as T // Makes sure it's the same class
         clone.messages = prefix
         clone.messages.addAll(messages.takeLast(count).toMutableList())

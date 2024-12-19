@@ -86,6 +86,18 @@ class KoboldCPPTests {
     }
 
     @Test
+    fun testSuccessiveGen() {
+        runBlocking {
+            repeat(2) {
+                api.rawGen(KoboldCPPGenFlags().init {
+                    prompt = "Test"
+                    max_length = 10
+                })
+            }
+        }
+    }
+
+    @Test
     fun testStream() {
         val start = "This is a short story about a"
         val flags = KoboldCPPGenFlags().init {

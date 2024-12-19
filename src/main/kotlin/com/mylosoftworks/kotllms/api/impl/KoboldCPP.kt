@@ -10,7 +10,7 @@ import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.stripTrailingSlash
 import com.mylosoftworks.kotllms.toBase64
 import io.ktor.client.*
-import io.ktor.client.engine.java.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
@@ -22,18 +22,22 @@ import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
-import java.awt.Image
 import java.awt.image.BufferedImage
 import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags>,
     RawGen<KoboldCPPGenFlags>, ChatGen<KoboldCPPGenFlags, ChatDef<BasicTemplatedChatMessage>> {
-    val client = HttpClient(Java) {
+
+    val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json()
         }
         install(SSE)
+
+        engine {
+            maxConnectionsCount = 4
+        }
     }
 
     private fun getApiUrl(path: String) = settings.url + path
@@ -199,6 +203,10 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
 
     override fun applyGrammar(grammar: GBNF) {
         this.grammar = grammar
+    }
+
+    override fun enableEarlyStopping(enable: Boolean) {
+        this.bypass_eos = enable // False to disable early stopping, true to force continuing
     }
 }
 

@@ -19,7 +19,10 @@ abstract class Flags<T : Flags<T>> {
         return this
     }
 
-    open fun applyGrammar(grammar: GBNF): Unit = error("")
+    // Optionally implemented features for better cross-compatibility
+    open fun applyGrammar(grammar: GBNF): Unit = error("This api doesn't support GBNF grammar through applyGrammar()")
+
+    open fun enableEarlyStopping(enable: Boolean): Unit = error("This api doesn't support changing early stopping through enableEarlyStopping()")
 }
 
 class Flag<T> {

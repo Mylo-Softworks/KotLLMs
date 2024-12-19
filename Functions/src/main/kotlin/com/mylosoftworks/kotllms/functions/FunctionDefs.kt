@@ -2,6 +2,9 @@ package com.mylosoftworks.kotllms.functions
 
 import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
+import com.mylosoftworks.kotllms.api.Flags
+import com.mylosoftworks.kotllms.chat.ChatDef
+import com.mylosoftworks.kotllms.features.impl.ChatGen
 
 val callRegex = Regex("Thoughts: \"(.*?)\"\\nCall: (.+)") // Single match, picked before function is selected to select a function
 val paramsRegex = Regex("(.*?): (.*)") // Repeated match, picked when function is selected to specify parameters
@@ -46,46 +49,46 @@ class FunctionDefs(initFunctions: FunctionDefs.() -> Unit = {}) {
         }
     }
 
+    /**
+     * Returns a GBNF object containing the grammar needed to pick a function to call.
+     */
     fun getGrammarForAllCalls(): GBNF {
         return GBNF {
-            literal("Thoughts: \\\"")
+            literal("Thoughts: \"")
             anyCount { range("\\\"", true) }
-            literal("\\\"\nCall: ")
+            literal("\"\nCall: ")
             oneOf {
-                this@FunctionDefs.javaClass.kotlin.members.forEach {
-                    literal(it.name)
+                this@FunctionDefs.functions.forEach {
+                    literal(it.key)
                 }
             }
         }
     }
 
-    /**
-     * Assuming the bot has already given a target function, obtain the parameters it wants to use.
-     * Parameters are always in order and named, thoughts are already written.
-     *
-     * ```
-     * paramname: value
-     * param2name: value
-     * ```
-     */
-    fun getGrammarForFunction(func: FunctionDefinition): GBNF {
-        return GBNF {
-            for (param in func.params.values) {
-                param.addGBNFRuleLine(this)
-            }
-        }
+    fun getTargettedFunctionFromResponse(fullResponse: String): Pair<FunctionDefinition?, String> {
+        val regexResult = callRegex.find(fullResponse)
+        val thoughts = regexResult?.groups?.get(1)?.value ?: "" // 1 is thoughts
+        val call = regexResult?.groups?.get(2)?.value // 2 is function name
+        return functions[call] to thoughts
     }
 
-    fun getTargettedFunctionFromResponse(fullResponse: String): FunctionDefinition? {
-        val regexResult = callRegex.find(fullResponse)
-        val call = regexResult?.groups?.get(1)?.value
-        return functions[call]
+    /**
+     * Make sure you have a high token count for generation.
+     * Include info about which functions are available through getDescriptionForAllCalls()
+     * Grammar is attempted to be set through the applyGrammar function on the flags
+     */
+    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCall(api: T, flags: F, chatDef: D): Triple<String, FunctionDefinition?, String> {
+        flags.applyGrammar(getGrammarForAllCalls()) // Force the LLM to pick a function from the available ones
+        flags.enableEarlyStopping(false) // Force the LLM to continue generating until the message is complete (or token max is reached)
+        val response = api.chatGen(chatDef, flags).getText()
+        val target = getTargettedFunctionFromResponse(response)
+        return Triple(response, target.first, target.second)
     }
 }
 
 class FunctionDefinition(val name: String, val comment: String? = null, initParams: FunctionDefinition.() -> Unit = {}) {
     val params: HashMap<String, FunctionParameter<*>> = hashMapOf()
-    val callback: suspend (HashMap<String, Pair<FunctionParameter<*>, Any?>>) -> Unit = {} // Callback is suspend because it's already in a suspend context
+    var callback: (HashMap<String, Pair<FunctionParameter<*>, Any?>>) -> Unit = {}
 
     init {
         initParams()
@@ -100,7 +103,24 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
     }
 
     fun getExtendedDescriptionForFunction(): String {
-        return "{${if (comment != null) "comment: \"$comment\", " else ""}parameters: ${params.values.joinToString(", ", "[", "]") { it.getDetailedDescription() }}}"
+        return "$name: {${if (comment != null) "comment: \"$comment\", " else ""}parameters: ${params.values.joinToString(", ", "[", "]") { it.getDetailedDescription() }}}"
+    }
+
+    /**
+     * Assuming the bot has already given a target function, obtain the parameters it wants to use.
+     * Parameters are always in order and named, thoughts are already written.
+     *
+     * ```
+     * paramname: value
+     * param2name: value
+     * ```
+     */
+    fun getGrammarForFunction(): GBNF {
+        return GBNF {
+            for (param in params.values) {
+                param.addGBNFRuleLine(this)
+            }
+        }
     }
 
     fun getParametersFromResponse(fullResponse: String): HashMap<String, Pair<FunctionParameter<*>, Any?>> {
@@ -118,9 +138,19 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
         return outputMap
     }
 
-    suspend fun callFunctionWithResponse(fullResponse: String) {
+    fun callFunctionWithResponse(fullResponse: String) {
         val params = getParametersFromResponse(fullResponse)
         callback(params)
+    }
+
+    /**
+     * Don't forget to add getExtendedDescriptionForFunction() to the chat context, so the LLM knows what the parameters are.
+     */
+    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestCallFunction(api: T, flags: F, chatDef: D): Pair<String, () -> Unit> {
+        flags.applyGrammar(getGrammarForFunction()) // Force the LLM to generate valid grammar
+        flags.enableEarlyStopping(false) // Force the LLM to continue generating until the message is complete (or token max is reached)
+        val response = api.chatGen(chatDef, flags).getText()
+        return response to { callFunctionWithResponse(response) }
     }
 }
 
@@ -161,7 +191,7 @@ class FunctionParameterString(name: String, optional: Boolean = false, comment: 
             literal("\"")
             anyCount {
                 oneOf {
-                    range("\"\\\n", true) // [^"\n]
+                    range("\"\\n", true) // [^"\n]
                     literal("\\\"") // Should allow escaping without triggering end of string
                 }
             }

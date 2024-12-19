@@ -17,6 +17,8 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+
     implementation(project(":"))
 
     implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:a1eeb2dd1e")
