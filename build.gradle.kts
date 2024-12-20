@@ -18,6 +18,17 @@ repositories {
     }
 }
 
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["kotlin"])
+            groupId = "com.mylosoftworks"
+            artifactId = "KotLLMs"
+            version = "1.0"
+        }
+    }
+}
+
 dependencies {
     testImplementation(kotlin("test"))
     implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:a1eeb2dd1e")

@@ -2,6 +2,7 @@ import java.net.URI
 
 plugins {
     kotlin("jvm")
+    id("maven-publish")
 }
 
 group = "com.mylosoftworks"
@@ -11,6 +12,17 @@ repositories {
     mavenCentral()
     maven {
         url = URI("https://jitpack.io")
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["kotlin"])
+            groupId = "com.mylosoftworks"
+            artifactId = "KotLLMs-functions"
+            version = "1.0"
+        }
     }
 }
 

@@ -248,8 +248,8 @@ class KoboldCPPGenerationResults(json: String, val api: KoboldCPP) : GenerationR
 }
 
 @Serializable
-data class KoboldCPPStreamChunk(val token: String, val finish_reason: String): StreamChunk() {
-    override fun getToken(): String = token
+data class KoboldCPPStreamChunk(val tokenVal: String, val finish_reason: String): StreamChunk() {
+    override fun getToken(): String = tokenVal
     override fun isLastToken() = finish_reason != "null"
 }
 
@@ -264,7 +264,7 @@ class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGeneratio
         streamers.forEach {
             it(chunk)
         }
-        currentContent += chunk.token
+        currentContent += chunk.tokenVal
         finish_reason = chunk.finish_reason
     }
 
