@@ -17,7 +17,7 @@ abstract class ChatMessage<T : ChatMessage<T>> {
         return listOf()
     }
 
-    fun init(init: T.() -> Unit): T {
+    inline fun init(init: T.() -> Unit): T {
         init(this as T)
         return this
     }
