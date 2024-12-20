@@ -11,4 +11,6 @@ abstract class API<S: Settings, F : Flags<*>>(var settings: S) {
      * @return Whether the API is functional
      */
     abstract suspend fun check(): Boolean
+
+    abstract fun createFlags(): F
 }

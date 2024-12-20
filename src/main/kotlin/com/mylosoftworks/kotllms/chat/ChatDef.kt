@@ -16,4 +16,18 @@ class ChatDef<M : ChatMessage<M>> : Cloneable {
         clone.messages.addAll(suffix)
         return clone
     }
+
+    fun <T : ChatDef<M>> cutChat(start: Int, end: Int, prefix: MutableList<M> = mutableListOf(), suffix: MutableList<M> = mutableListOf()): T {
+        val clone = this.clone() as T // Makes sure it's the same class
+        clone.messages = prefix
+        clone.messages.addAll(messages.subList(start, end))
+        clone.messages.addAll(suffix)
+        return clone
+    }
+
+    fun <T : ChatDef<M>> deepClone(): T {
+        val clone = this.clone() as T
+        clone.messages = messages.toMutableList() // Copies the list
+        return clone
+    }
 }

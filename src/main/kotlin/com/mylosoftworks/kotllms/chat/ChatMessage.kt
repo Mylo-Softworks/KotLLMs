@@ -26,7 +26,7 @@ abstract class ChatMessage<T : ChatMessage<T>> {
 /**
  * A chat message meant to be used with ChatTemplate, to be turned into a prompt string.
  */
-open class BasicTemplatedChatMessage : ChatMessage<BasicTemplatedChatMessage>() { // Open class, since you can add extra message variables
+open class BasicChatMessage : ChatMessage<BasicChatMessage>() { // Open class, since you can add extra message variables
     var role by MessageFlag<String>()
     var content by MessageFlag<String>()
 

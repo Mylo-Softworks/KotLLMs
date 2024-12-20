@@ -13,7 +13,13 @@ interface Cancellable {
     suspend fun cancel()
 }
 
-abstract class StreamedGenerationResult<C> : GenerationResult(true) {
+abstract class StreamChunk {
+    abstract fun getToken(): String
+    abstract fun isLastToken(): Boolean
+}
+
+abstract class StreamedGenerationResult<C: StreamChunk> : GenerationResult(true) {
     abstract fun registerStreamer(block: (C) -> Unit)
     abstract fun isComplete(): Boolean
+    abstract fun update(chunk: C)
 }

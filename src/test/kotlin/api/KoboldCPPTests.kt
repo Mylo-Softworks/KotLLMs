@@ -4,14 +4,10 @@ import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.StreamedGenerationResult
 import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
-import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenerationResultsStreamed
-import com.mylosoftworks.kotllms.api.impl.KoboldCPPStreamChunk
-import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
+import com.mylosoftworks.kotllms.chat.BasicChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
-import com.mylosoftworks.kotllms.chat.ChatMessage
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
-import com.mylosoftworks.kotllms.chat.templated.presets.MistralTemplate
 import kotlinx.coroutines.runBlocking
 import javax.imageio.ImageIO
 import kotlin.io.path.Path
@@ -107,11 +103,11 @@ class KoboldCPPTests {
             stream = true
         }
         runBlocking {
-            val result = api.rawGen(flags) as KoboldCPPGenerationResultsStreamed
+            val result = api.rawGen(flags) as StreamedGenerationResult<*>
 
             print(start) // Start
             result.registerStreamer {
-                print(it.token) // Stream
+                print(it.getToken()) // Stream
                 System.out.flush() // Show the new tokens even before newline (since print doesn't flush)
                 if (it.isLastToken()) println() // End
             }
@@ -120,12 +116,12 @@ class KoboldCPPTests {
 
     @Test
     fun testChat() {
-        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        val exampleChat = ChatDef<BasicChatMessage>()
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "Hi!"
             role = "bot"
         })
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "What's up?"
             role = "user"
         })
@@ -153,8 +149,8 @@ bot:
     fun testImage() {
         val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
 
-        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        val exampleChat = ChatDef<BasicChatMessage>()
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "What do you see in this image?"
             role = "user"
             images = listOf(image)

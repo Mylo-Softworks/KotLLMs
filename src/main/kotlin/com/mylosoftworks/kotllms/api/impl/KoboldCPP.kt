@@ -3,7 +3,7 @@ package com.mylosoftworks.kotllms.api.impl
 import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.*
 import com.mylosoftworks.kotllms.base64ToImage
-import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
+import com.mylosoftworks.kotllms.chat.BasicChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 import com.mylosoftworks.kotllms.features.impl.*
@@ -27,7 +27,7 @@ import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags>,
-    RawGen<KoboldCPPGenFlags>, ChatGen<KoboldCPPGenFlags, ChatDef<BasicTemplatedChatMessage>> {
+    RawGen<KoboldCPPGenFlags>, ChatGen<KoboldCPPGenFlags, ChatDef<BasicChatMessage>> {
 
     val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -78,6 +78,10 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
 
     override suspend fun check(): Boolean {
         return makeHttpGet("/api/v1/model").status == HttpStatusCode.OK
+    }
+
+    override fun createFlags(): KoboldCPPGenFlags {
+        return KoboldCPPGenFlags()
     }
 
     override suspend fun version(): KoboldCPPVersion {
@@ -137,7 +141,7 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     }
 
     override suspend fun chatGen(
-        chatDef: ChatDef<BasicTemplatedChatMessage>,
+        chatDef: ChatDef<BasicChatMessage>,
         flags: KoboldCPPGenFlags?
     ): GenerationResult {
         if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
@@ -244,8 +248,9 @@ class KoboldCPPGenerationResults(json: String, val api: KoboldCPP) : GenerationR
 }
 
 @Serializable
-data class KoboldCPPStreamChunk(val token: String, val finish_reason: String) {
-    fun isLastToken() = finish_reason != "null"
+data class KoboldCPPStreamChunk(val token: String, val finish_reason: String): StreamChunk() {
+    override fun getToken(): String = token
+    override fun isLastToken() = finish_reason != "null"
 }
 
 class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGenerationResult<KoboldCPPStreamChunk>(), Cancellable {
@@ -255,7 +260,7 @@ class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGeneratio
     val currentContentAsChunk
         get() = KoboldCPPStreamChunk(currentContent, finish_reason)
 
-    fun update(chunk: KoboldCPPStreamChunk) {
+    override fun update(chunk: KoboldCPPStreamChunk) {
         streamers.forEach {
             it(chunk)
         }

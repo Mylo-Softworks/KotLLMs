@@ -1,6 +1,6 @@
 package template
 
-import com.mylosoftworks.kotllms.chat.BasicTemplatedChatMessage
+import com.mylosoftworks.kotllms.chat.BasicChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
@@ -9,12 +9,12 @@ import kotlin.test.Test
 class TemplateTests {
     @Test
     fun testTemplate() {
-        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        val exampleChat = ChatDef<BasicChatMessage>()
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "Hi!"
             role = "bot"
         })
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "What's up?"
             role = "user"
         })
@@ -40,12 +40,12 @@ bot:
 
     @Test
     fun testTemplatePreset() {
-        val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        val exampleChat = ChatDef<BasicChatMessage>()
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "Hi!"
             role = "assistant"
         })
-        exampleChat.addMessage(BasicTemplatedChatMessage().init {
+        exampleChat.addMessage(BasicChatMessage().init {
             content = "What's up?"
             role = "user"
         })
