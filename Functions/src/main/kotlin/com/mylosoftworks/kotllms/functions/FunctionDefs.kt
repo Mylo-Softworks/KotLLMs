@@ -88,7 +88,7 @@ class FunctionDefs(initFunctions: FunctionDefs.() -> Unit = {}) {
 
 class FunctionDefinition(val name: String, val comment: String? = null, initParams: FunctionDefinition.() -> Unit = {}) {
     val params: HashMap<String, FunctionParameter<*>> = hashMapOf()
-    var callback: (HashMap<String, Pair<FunctionParameter<*>, Any?>>) -> Unit = {}
+    var callback: suspend (HashMap<String, Pair<FunctionParameter<*>, Any?>>) -> Unit = {}
 
     init {
         initParams()
@@ -138,7 +138,7 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
         return outputMap
     }
 
-    fun callFunctionWithResponse(fullResponse: String) {
+    suspend fun callFunctionWithResponse(fullResponse: String) {
         val params = getParametersFromResponse(fullResponse)
         callback(params)
     }
@@ -146,7 +146,7 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
     /**
      * Don't forget to add getExtendedDescriptionForFunction() to the chat context, so the LLM knows what the parameters are.
      */
-    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestCallFunction(api: T, flags: F, chatDef: D): Pair<String, () -> Unit> {
+    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestCallFunction(api: T, flags: F, chatDef: D): Pair<String, suspend () -> Unit> {
         flags.applyGrammar(getGrammarForFunction()) // Force the LLM to generate valid grammar
         flags.enableEarlyStopping(false) // Force the LLM to continue generating until the message is complete (or token max is reached)
         val response = api.chatGen(chatDef, flags).getText()
