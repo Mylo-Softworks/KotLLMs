@@ -45,3 +45,6 @@ else {
     // Something went wrong during the generation
 }
 ```
+
+### Usage (Single request)
+TODO: Write documentation for `FunctionDefs.requestFunctionCallSingleRequest()`

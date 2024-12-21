@@ -37,6 +37,7 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
 
         engine {
             maxConnectionsCount = 4
+            requestTimeout = 30000
         }
     }
 

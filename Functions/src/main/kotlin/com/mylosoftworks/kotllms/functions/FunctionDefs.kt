@@ -8,6 +8,7 @@ import com.mylosoftworks.kotllms.features.impl.ChatGen
 
 val callRegex = Regex("Thoughts: \"(.*?)\"\\nCall: (.+)") // Single match, picked before function is selected to select a function
 val paramsRegex = Regex("(.*?): (.*)") // Repeated match, picked when function is selected to specify parameters
+val paramsSplit = "--params--" // String used to split parameters from function selection, uses a single line, only used for single request function calling
 
 /**
  * Base class for function definitions.
@@ -31,7 +32,7 @@ val paramsRegex = Regex("(.*?): (.*)") // Repeated match, picked when function i
  *  parameters: [{}]
  * }
  */
-class FunctionDefs(initFunctions: FunctionDefs.() -> Unit = {}) {
+class FunctionDefs(val maxThoughtLength: Int = 100, initFunctions: FunctionDefs.() -> Unit = {}) {
     val functions: HashMap<String, FunctionDefinition> = hashMapOf()
 
     init {
@@ -49,17 +50,46 @@ class FunctionDefs(initFunctions: FunctionDefs.() -> Unit = {}) {
         }
     }
 
+    fun getDetailedDescriptionForAllCalls(): String {
+        return functions.values.joinToString(",", "{", "}") {
+            it.getExtendedDescriptionForFunction()
+        }
+    }
+
     /**
      * Returns a GBNF object containing the grammar needed to pick a function to call.
      */
     fun getGrammarForAllCalls(): GBNF {
         return GBNF {
             literal("Thoughts: \"")
-            anyCount { range("\\\"", true) }
+            repeat(max = maxThoughtLength) { range("\\\"\\n", true) }
             literal("\"\nCall: ")
-            oneOf {
+            oneOf { // Pick from function names
                 this@FunctionDefs.functions.forEach {
                     literal(it.key)
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns a GBNF object containing the grammar needed to pick a function to call and parameters in one go.
+     */
+    fun getGrammarForAllCallsSingleRequest(): GBNF {
+        return GBNF {
+            literal("Thoughts: \"")
+            repeat(max = maxThoughtLength) { range("\\\"\\n", true) }
+            literal("\"\nCall: ")
+            val entities = mutableListOf<GBNFEntity>()
+            this@FunctionDefs.functions.values.forEach {
+                entity(it.name) { // Create a named entity
+                    literal(it.name + "\n$paramsSplit\n") // Call: name\n$paramsSplit\n
+                    it.applyGrammarForFunction(this)
+                }.let { entities.add(it) }
+            }
+            oneOf { // Pick from function grammars
+                entities.forEach {
+                    it()
                 }
             }
         }
@@ -83,6 +113,18 @@ class FunctionDefs(initFunctions: FunctionDefs.() -> Unit = {}) {
         val response = api.chatGen(chatDef, flags).getText()
         val target = getTargettedFunctionFromResponse(response)
         return Triple(response, target.first, target.second)
+    }
+
+    /**
+     * Create the function call in a single request, uses a different grammar, makes longer responses
+     */
+    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCallSingleRequest(api: T, flags: F, chatDef: D): Triple<String, (suspend () -> Unit)?, String> {
+        flags.applyGrammar(getGrammarForAllCallsSingleRequest())
+        flags.enableEarlyStopping(false)
+        val response = api.chatGen(chatDef, flags).getText()
+        val (funcAndComment, params) = response.split("\n$paramsSplit\n")
+        val (function, thoughts) = getTargettedFunctionFromResponse(funcAndComment)
+        return Triple(response, function?.let { { it.callFunctionWithResponse(params) } }, thoughts)
     }
 }
 
@@ -117,6 +159,12 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
      */
     fun getGrammarForFunction(): GBNF {
         return GBNF {
+            applyGrammarForFunction(this)
+        }
+    }
+
+    fun applyGrammarForFunction(entity: GBNFEntity) {
+        entity.apply {
             for (param in params.values) {
                 param.addGBNFRuleLine(this)
             }
@@ -185,11 +233,11 @@ abstract class FunctionParameter<T>(var name: String, var optional: Boolean = fa
     }
 }
 
-class FunctionParameterString(name: String, optional: Boolean = false, comment: String? = null) : FunctionParameter<String>(name, optional, comment, "String") {
+class FunctionParameterString(name: String, optional: Boolean = false, comment: String? = null, val maxLength: Int = 999999) : FunctionParameter<String>(name, optional, comment, "String") {
     override fun addGBNFRule(gbnf: GBNFEntity) {
         gbnf.run {
             literal("\"")
-            anyCount {
+            repeat(max = maxLength) {
                 oneOf {
                     range("\"\\n", true) // [^"\n]
                     literal("\\\"") // Should allow escaping without triggering end of string
