@@ -6,9 +6,6 @@ Function calling submodule, allows you to define functions, let the LLM pick one
 > The chat should contain information about the available functions, otherwise the llm is less likely to pick the correct option,
 > while it will always pick an existing function name through the grammar, providing information is crucial for proper function selection.
 
-> You can use `functions.getDescriptionForAllCalls()` to get a json-like structure which can provide context to the LLM about which functions are available.
-> When the LLM has selected a function, you can use `function.getExtendedDescriptionForFunction()` to give the long description for the single selected function.
-
 > The way the context is provided to the LLM is up to your implementation. Context is provided through chat messages, your api needs to support those,
 > some apis, like KoboldCPP, support chat messages through templates. See: `Llama3Template`, `MistralTemplate` and `ChatTemplateDSL` for quick manual implementations.
 >
@@ -29,22 +26,13 @@ val functions = FunctionDefs {
 }
 ```
 
-In order to request the LLM to select a function, assuming your chat is in a variable named "chat" and you are already in a suspend context:
+In order to request the LLM to select and call a function with parameters, assuming your chat is in a variable named "chat" and you are already in a suspend context:
 ```kotlin
-val targetCall = functions.requestFunctionCall(api, flags, chat) // Triple(raw response string, function object, throughts string)
-val targetFunction = targetCall.second
-if (targetFunction != null) {
-    val description = targetFunction.getExtendedDescriptionForFunction() // The description with full info about the parameters
-    // TODO: use the description, like with chat.subChat()
-    // Assuming the new subchat is still named "chat"
-    val readyCall = targetFunction.requestCallFunction(api, flags, chat) // Pair(raw response string, callable to finalize the call)
-    // To execute the function call with the parameters given by the LLM
-    readyCall.second()
-}
-else {
-    // Something went wrong during the generation
-}
+val (raw, func, comment) = functions.requestFunctionCallSingleRequest(api, flags, chat)
+println("Comment: $comment")
+func?.let { it() } // Calling the chosen function
 ```
 
-### Usage (Single request)
-TODO: Write documentation for `FunctionDefs.requestFunctionCallSingleRequest()`
+TODO: Write new javadoc  
+TODO: Add better DSL for function calling which would allow parameters to be defined through a delegate, and accessed as if it were a regular variable.  
+TODO: Support writing a custom builder for giving function definitions to the llm, make the current pseudo-json builder default. Similar to how FunctionGrammarDef can now be replaced.

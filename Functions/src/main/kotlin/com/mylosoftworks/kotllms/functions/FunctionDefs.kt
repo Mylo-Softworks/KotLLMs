@@ -6,33 +6,12 @@ import com.mylosoftworks.kotllms.api.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.features.impl.ChatGen
 
-val callRegex = Regex("Thoughts: \"(.*?)\"\\nCall: (.+)") // Single match, picked before function is selected to select a function
-val paramsRegex = Regex("(.*?): (.*)") // Repeated match, picked when function is selected to specify parameters
-val paramsSplit = "--params--" // String used to split parameters from function selection, uses a single line, only used for single request function calling
-
 /**
  * Base class for function definitions.
  *
  * For function calls, the LLM is told a few things:
- *
- * First, the LLM is provided with basic function signatures
- * ```
- * {
- * exampleFunction: {
- *   comment: "an example function, no purpose",
- *   parameters: [{param1: Int}, {param2: String}]
- *  }
- * }
- * ```
- *
- * The LLM is then able to select one function to call by name using GBNF `root ::= exampleFunction | exampleFunction2`
- * The result will be the function that the LLM wants to call, now the LLM can be provided with a detailed description of the function call.
- * exampleFunction: {
- *  comment: "an example function, no purpose",
- *  parameters: [{}]
- * }
  */
-class FunctionDefs(val maxThoughtLength: Int = 100, initFunctions: FunctionDefs.() -> Unit = {}) {
+class FunctionDefs(val grammarDef: FunctionGrammarDef = DefaultFunctionGrammar(100), initFunctions: FunctionDefs.() -> Unit = {}) {
     val functions: HashMap<String, FunctionDefinition> = hashMapOf()
 
     init {
@@ -57,62 +36,10 @@ class FunctionDefs(val maxThoughtLength: Int = 100, initFunctions: FunctionDefs.
     }
 
     /**
-     * Returns a GBNF object containing the grammar needed to pick a function to call.
-     */
-    fun getGrammarForAllCalls(): GBNF {
-        return GBNF {
-            literal("Thoughts: \"")
-            repeat(max = maxThoughtLength) { range("\\\"\\n", true) }
-            literal("\"\nCall: ")
-            oneOf { // Pick from function names
-                this@FunctionDefs.functions.forEach {
-                    literal(it.key)
-                }
-            }
-        }
-    }
-
-    /**
      * Returns a GBNF object containing the grammar needed to pick a function to call and parameters in one go.
      */
     fun getGrammarForAllCallsSingleRequest(): GBNF {
-        return GBNF {
-            literal("Thoughts: \"")
-            repeat(max = maxThoughtLength) { range("\\\"\\n", true) }
-            literal("\"\nCall: ")
-            val entities = mutableListOf<GBNFEntity>()
-            this@FunctionDefs.functions.values.forEach {
-                entity(it.name) { // Create a named entity
-                    literal(it.name + "\n$paramsSplit\n") // Call: name\n$paramsSplit\n
-                    it.applyGrammarForFunction(this)
-                }.let { entities.add(it) }
-            }
-            oneOf { // Pick from function grammars
-                entities.forEach {
-                    it()
-                }
-            }
-        }
-    }
-
-    fun getTargettedFunctionFromResponse(fullResponse: String): Pair<FunctionDefinition?, String> {
-        val regexResult = callRegex.find(fullResponse)
-        val thoughts = regexResult?.groups?.get(1)?.value ?: "" // 1 is thoughts
-        val call = regexResult?.groups?.get(2)?.value // 2 is function name
-        return functions[call] to thoughts
-    }
-
-    /**
-     * Make sure you have a high token count for generation.
-     * Include info about which functions are available through getDescriptionForAllCalls()
-     * Grammar is attempted to be set through the applyGrammar function on the flags
-     */
-    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCall(api: T, flags: F, chatDef: D): Triple<String, FunctionDefinition?, String> {
-        flags.applyGrammar(getGrammarForAllCalls()) // Force the LLM to pick a function from the available ones
-        flags.enableEarlyStopping(false) // Force the LLM to continue generating until the message is complete (or token max is reached)
-        val response = api.chatGen(chatDef, flags).getText()
-        val target = getTargettedFunctionFromResponse(response)
-        return Triple(response, target.first, target.second)
+        return grammarDef.getFunctionsGrammar(this)
     }
 
     /**
@@ -122,9 +49,8 @@ class FunctionDefs(val maxThoughtLength: Int = 100, initFunctions: FunctionDefs.
         flags.applyGrammar(getGrammarForAllCallsSingleRequest())
         flags.enableEarlyStopping(false)
         val response = api.chatGen(chatDef, flags).getText()
-        val (funcAndComment, params) = response.split("\n$paramsSplit\n")
-        val (function, thoughts) = getTargettedFunctionFromResponse(funcAndComment)
-        return Triple(response, function?.let { { it.callFunctionWithResponse(params) } }, thoughts)
+
+        return grammarDef.parseFunctionCall(this, response)
     }
 }
 
@@ -147,82 +73,12 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
     fun getExtendedDescriptionForFunction(): String {
         return "$name: {${if (comment != null) "comment: \"$comment\", " else ""}parameters: ${params.values.joinToString(", ", "[", "]") { it.getDetailedDescription() }}}"
     }
-
-    /**
-     * Assuming the bot has already given a target function, obtain the parameters it wants to use.
-     * Parameters are always in order and named, thoughts are already written.
-     *
-     * ```
-     * paramname: value
-     * param2name: value
-     * ```
-     */
-    fun getGrammarForFunction(): GBNF {
-        return GBNF {
-            applyGrammarForFunction(this)
-        }
-    }
-
-    fun applyGrammarForFunction(entity: GBNFEntity) {
-        entity.apply {
-            for (param in params.values) {
-                param.addGBNFRuleLine(this)
-            }
-        }
-    }
-
-    fun getParametersFromResponse(fullResponse: String): HashMap<String, Pair<FunctionParameter<*>, Any?>> {
-        val regexMatches = paramsRegex.findAll(fullResponse)
-        val outputMap = HashMap<String, Pair<FunctionParameter<*>, Any?>>()
-
-        for (match in regexMatches) {
-            val name = match.groups[1]!!.value
-            val value = match.groups[2]!!.value
-
-            val parameter = params[name]!!
-            outputMap[name] = parameter to parameter.parseProvidedParams(value)
-        }
-
-        return outputMap
-    }
-
-    suspend fun callFunctionWithResponse(fullResponse: String) {
-        val params = getParametersFromResponse(fullResponse)
-        callback(params)
-    }
-
-    /**
-     * Don't forget to add getExtendedDescriptionForFunction() to the chat context, so the LLM knows what the parameters are.
-     */
-    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestCallFunction(api: T, flags: F, chatDef: D): Pair<String, suspend () -> Unit> {
-        flags.applyGrammar(getGrammarForFunction()) // Force the LLM to generate valid grammar
-        flags.enableEarlyStopping(false) // Force the LLM to continue generating until the message is complete (or token max is reached)
-        val response = api.chatGen(chatDef, flags).getText()
-        return response to { callFunctionWithResponse(response) }
-    }
 }
 
 abstract class FunctionParameter<T>(var name: String, var optional: Boolean = false, var comment: String? = null, val typeName: String) {
 
     abstract fun addGBNFRule(gbnf: GBNFEntity)
     abstract fun parseProvidedParams(string: String): T
-
-    fun addGBNFRuleLine(gbnf: GBNFEntity) {
-        gbnf.run {
-            if (optional) {
-                optional {
-                    literal("$name: ")
-                    addGBNFRule(this)
-                    literal("\n")
-                }
-            }
-            else {
-                literal("$name: ")
-                addGBNFRule(this)
-                literal("\n")
-            }
-        }
-    }
 
     fun getBasicDescription(): String {
         return "{$name: $typeName}"
