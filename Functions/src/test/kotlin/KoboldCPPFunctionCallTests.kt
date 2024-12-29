@@ -34,7 +34,7 @@ class KoboldCPPFunctionCallTests {
             content = """
                 First, you write your thoughts down, allowing you to decide on which function to call, and what values to give as the parameters, then, you write down the name of the function to call, after that, provide values for the parameters, some parameters can be optional.
                 The following is a JSON object containing all functions available to you, with a name, and description for each one of them:
-                ${functions.getDetailedDescriptionForAllCalls()}
+                ${functions.getDescriptionForAllCalls()}
                 """.trimIndent()
             role = "system"
         }

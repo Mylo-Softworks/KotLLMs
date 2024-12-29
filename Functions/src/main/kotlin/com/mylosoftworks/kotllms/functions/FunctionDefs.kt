@@ -11,7 +11,11 @@ import com.mylosoftworks.kotllms.features.impl.ChatGen
  *
  * For function calls, the LLM is told a few things:
  */
-class FunctionDefs(val grammarDef: FunctionGrammarDef = DefaultFunctionGrammar(100), initFunctions: FunctionDefs.() -> Unit = {}) {
+class FunctionDefs(
+    val grammarDef: FunctionGrammarDef = DefaultFunctionGrammar(100),
+    val functionInfoDef: FunctionInfoDef = DefaultFunctionInfoDef,
+    initFunctions: FunctionDefs.() -> Unit = {}
+) {
     val functions: HashMap<String, FunctionDefinition> = hashMapOf()
 
     init {
@@ -24,15 +28,7 @@ class FunctionDefs(val grammarDef: FunctionGrammarDef = DefaultFunctionGrammar(1
 
 
     fun getDescriptionForAllCalls(): String {
-        return functions.values.joinToString(",", "{", "}") {
-            it.getShortDescriptionForFunction()
-        }
-    }
-
-    fun getDetailedDescriptionForAllCalls(): String {
-        return functions.values.joinToString(",", "{", "}") {
-            it.getExtendedDescriptionForFunction()
-        }
+        return functionInfoDef.getInfoForAllFunctions(this)
     }
 
     /**
@@ -65,28 +61,12 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
     fun addParam(param: FunctionParameter<*>) {
         params[param.name] = (param)
     }
-
-    fun getShortDescriptionForFunction(): String {
-        return "$name: {${if (comment != null) "comment: \"$comment\", " else ""}parameters: ${params.values.joinToString(", ", "[", "]") { it.getBasicDescription() }}}"
-    }
-
-    fun getExtendedDescriptionForFunction(): String {
-        return "$name: {${if (comment != null) "comment: \"$comment\", " else ""}parameters: ${params.values.joinToString(", ", "[", "]") { it.getDetailedDescription() }}}"
-    }
 }
 
 abstract class FunctionParameter<T>(var name: String, var optional: Boolean = false, var comment: String? = null, val typeName: String) {
 
     abstract fun addGBNFRule(gbnf: GBNFEntity)
     abstract fun parseProvidedParams(string: String): T
-
-    fun getBasicDescription(): String {
-        return "{$name: $typeName}"
-    }
-
-    fun getDetailedDescription(): String {
-        return "{$name: {${if (comment != null) "comment: \"$comment\"," else ""}type: $typeName}}"
-    }
 }
 
 class FunctionParameterString(name: String, optional: Boolean = false, comment: String? = null, val maxLength: Int = 999999) : FunctionParameter<String>(name, optional, comment, "String") {

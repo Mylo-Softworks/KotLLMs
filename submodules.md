@@ -34,5 +34,4 @@ func?.let { it() } // Calling the chosen function
 ```
 
 TODO: Write new javadoc  
-TODO: Add better DSL for function calling which would allow parameters to be defined through a delegate, and accessed as if it were a regular variable.  
-TODO: Support writing a custom builder for giving function definitions to the llm, make the current pseudo-json builder default. Similar to how FunctionGrammarDef can now be replaced.
+TODO: Add better DSL for function calling which would allow parameters to be defined through a delegate, and accessed as if it were a regular variable.
