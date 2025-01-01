@@ -1,7 +1,7 @@
 package com.mylosoftworks.kotllms.functions
 
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
+import com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 
 /**
  * A grammar definition used for function calling, used for parsing function calls etc
@@ -84,5 +84,56 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
         }
 
         return outputMap
+    }
+}
+
+/**
+ * Rules for correct parsing:
+ *
+ * 1. Thoughts should be stored in an entity named "thoughts" (fallback to empty string, in which case you won't be able to read it back)
+ * 2. Functions should be stored in an entity named "function_{name}" where {name} is the name of the function.
+ * 3. (The parsable value part of) function parameters should be stored in an entity named "param_{function}_{name}", inside of the function entity where {function} is the function name (to prevent name collisions) and {name} is the name of the parameter.
+ */
+class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGrammarDef() {
+    override fun parseFunctionCall(
+        defs: FunctionDefs,
+        response: String
+    ): Triple<String, (suspend () -> Unit)?, String> {
+        val grammar = getFunctionsGrammar(defs)
+
+        val (parsedTree, _) = grammar.parse(response)
+
+        val thoughtsOrEmpty = parsedTree.find { it.isNamedEntity("thoughts") }?.strValue ?: ""
+
+        // Find which function was called
+        val functionCall = parsedTree.find(includeSelf = false) {parsed ->
+            val entry = parsed.getAsEntityIfPossible() ?: return@find false
+            return@find entry.identifier?.startsWith("function_") ?: false
+        } ?: return Triple(response, null, thoughtsOrEmpty)
+
+        val functionName = (functionCall.associatedEntry as GBNFEntity).identifier!!.substring("function_".length)
+        val function = defs.functions[functionName] ?: return Triple(response, null, thoughtsOrEmpty)
+        val paramsMap = hashMapOf<String, Pair<FunctionParameter<*>, Any?>>()
+        // Find all defined parameters
+        val paramPrefix = "param_${function.name}_"
+        val definedParams = functionCall.findAll {parsed ->
+            val entry = parsed.getAsEntityIfPossible() ?: return@findAll false
+            return@findAll entry.identifier?.startsWith(paramPrefix) ?: false
+        }
+
+        definedParams.map {
+            val paramName = (it.associatedEntry as GBNFEntity).identifier!!.substring(paramPrefix.length)
+            val param = function.params[paramName] ?: return Triple(response, null, thoughtsOrEmpty)
+            paramsMap[paramName] = param to param.parseProvidedParams(it.strValue)
+        }
+
+        return Triple(response, { function.callback(paramsMap) }, thoughtsOrEmpty)
+    }
+
+    override fun getFunctionsGrammar(defs: FunctionDefs): GBNF {
+        val base = GBNF {
+            create(this, defs)
+        }
+        return base
     }
 }

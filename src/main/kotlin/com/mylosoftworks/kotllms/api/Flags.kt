@@ -1,6 +1,6 @@
 package com.mylosoftworks.kotllms.api
 
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.GBNF
 import kotlinx.serialization.json.JsonElement
 import kotlin.reflect.KProperty
 

@@ -1,7 +1,7 @@
 package com.mylosoftworks.kotllms.functions
 
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
+import com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.api.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.features.impl.ChatGen
@@ -75,8 +75,8 @@ class FunctionParameterString(name: String, optional: Boolean = false, comment: 
             literal("\"")
             repeat(max = maxLength) {
                 oneOf {
-                    range("\"\\n", true) // [^"\n]
                     literal("\\\"") // Should allow escaping without triggering end of string
+                    range("\"\\n", true) // [^"\n]
                 }
             }
             literal("\"")

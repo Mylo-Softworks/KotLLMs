@@ -1,6 +1,6 @@
 package com.mylosoftworks.kotllms.api.impl
 
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.*
 import com.mylosoftworks.kotllms.base64ToImage
 import com.mylosoftworks.kotllms.chat.BasicChatMessage
