@@ -28,7 +28,7 @@ val functions = FunctionDefs {
 
 In order to request the LLM to select and call a function with parameters, assuming your chat is in a variable named "chat" and you are already in a suspend context:
 ```kotlin
-val (raw, func, comment) = functions.requestFunctionCallSingleRequest(api, flags, chat)
+val (raw, func, comment) = functions.requestFunctionCallSingleRequest(api, flags, chat).getOrThrow() // Result, getOrThrow should only be used if you're certain it's going to work and you're already in a safe context
 println("Comment: $comment")
 func?.let { it() } // Calling the chosen function
 ```
@@ -82,5 +82,4 @@ val autoParsedExample = AutoParsedGrammarDef {
 }
 ```
 
-TODO: Write new javadoc  
 TODO: Add better DSL for function calling which would allow parameters to be defined through a delegate, and accessed as if it were a regular variable.

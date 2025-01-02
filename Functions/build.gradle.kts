@@ -33,7 +33,7 @@ dependencies {
 
     implementation(project(":"))
 
-    implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:bd5ade6488")
+    implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:1129074f8f")
 
     implementation(kotlin("reflect"))
 }

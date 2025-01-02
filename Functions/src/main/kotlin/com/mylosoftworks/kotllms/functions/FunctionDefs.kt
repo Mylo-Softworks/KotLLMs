@@ -41,7 +41,7 @@ class FunctionDefs(
     /**
      * Create the function call in a single request, uses a different grammar, makes longer responses
      */
-    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCallSingleRequest(api: T, flags: F, chatDef: D): Triple<String, (suspend () -> Unit)?, String> {
+    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCallSingleRequest(api: T, flags: F, chatDef: D): Result<Triple<String, (suspend () -> Unit)?, String>> {
         flags.applyGrammar(getGrammarForAllCallsSingleRequest())
         flags.enableEarlyStopping(false)
         val response = api.chatGen(chatDef, flags).getText()
