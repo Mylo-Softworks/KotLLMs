@@ -39,8 +39,8 @@ It works by parsing the output with a custom (experimental) GBNF parser.
 
 Any GBNF grammar is allowed as long as it's parsable and **follows these rules**:
 1. Thoughts should be stored in an entity named "`thoughts`"  (fallback to empty string, in which case you won't be able to read it back)
-2. Functions should be stored in an entity named "`function_{name}`" where `{name}` is the name of the function.
-3. (The parsable value part of) function parameters should be stored in an entity named "`param_{function}_{name}`", inside of the function entity where `{function}` is the function name (to prevent name collisions) and `{name}` is the name of the parameter.
+2. Functions should be stored in an entity named "`function-{name}`" where `{name}` is the name of the function.
+3. (The parsable value part of) function parameters should be stored in an entity named "`param-{function}-{name}`", inside of the function entity where `{function}` is the function name (to prevent name collisions) and `{name}` is the name of the parameter.
 
 Below is the default grammar (`DefaultFunctionGrammar`), defined through the `AutoParsedGrammarDef` format:
 ```kotlin
@@ -48,13 +48,13 @@ val autoParsedExample = AutoParsedGrammarDef {
     val thoughts = entity("thoughts") { repeat(max = 100) { range("\\\"\\n", true) } }
 
     val allFunctions = it.functions.values.map {func ->
-        entity("function_${func.name}") {
+        entity("function-${func.name}") {
             literal(func.name + "\n--params--\n")
             for (param in func.params.values) {
                 if (param.optional) {
                     optional {
                         literal("${param.name}: ")
-                        entity("param_${func.name}_${param.name}") currentParam@{
+                        entity("param-${func.name}-${param.name}") currentParam@{
                             param.addGBNFRule(this@currentParam) // Value part
                         }() // Immediately insert it after declaring
                         literal("\n")
@@ -62,7 +62,7 @@ val autoParsedExample = AutoParsedGrammarDef {
                 }
                 else {
                     literal("${param.name}: ")
-                    entity("param_${func.name}_${param.name}") currentParam@{
+                    entity("param-${func.name}-${param.name}") currentParam@{
                         param.addGBNFRule(this@currentParam) // Value part
                     }() // Immediately insert it after declaring
                     literal("\n")

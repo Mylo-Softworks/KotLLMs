@@ -92,8 +92,8 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
  * Rules for correct parsing:
  *
  * 1. Thoughts should be stored in an entity named "thoughts" (fallback to empty string, in which case you won't be able to read it back)
- * 2. Functions should be stored in an entity named "function_{name}" where {name} is the name of the function.
- * 3. (The parsable value part of) function parameters should be stored in an entity named "param_{function}_{name}", inside of the function entity where {function} is the function name (to prevent name collisions) and {name} is the name of the parameter.
+ * 2. Functions should be stored in an entity named "function-{name}" where {name} is the name of the function.
+ * 3. (The parsable value part of) function parameters should be stored in an entity named "param-{function}-{name}", inside of the function entity where {function} is the function name (to prevent name collisions) and {name} is the name of the parameter.
  */
 class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGrammarDef() {
     override fun parseFunctionCall(
@@ -109,14 +109,14 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
         // Find which function was called
         val functionCall = parsedTree.find(includeSelf = false) {parsed ->
             val entry = parsed.getAsEntityIfPossible() ?: return@find false
-            return@find entry.identifier?.startsWith("function_") ?: false
+            return@find entry.identifier?.startsWith("function-") ?: false
         } ?: return Result.success(Triple(response, null, thoughtsOrEmpty))
 
-        val functionName = (functionCall.associatedEntry as GBNFEntity).identifier!!.substring("function_".length)
+        val functionName = (functionCall.associatedEntry as GBNFEntity).identifier!!.substring("function-".length)
         val function = defs.functions[functionName] ?: return Result.success(Triple(response, null, thoughtsOrEmpty))
         val paramsMap = hashMapOf<String, Pair<FunctionParameter<*>, Any?>>()
         // Find all defined parameters
-        val paramPrefix = "param_${function.name}_"
+        val paramPrefix = "param-${function.name}-"
         val definedParams = functionCall.findAll {parsed ->
             val entry = parsed.getAsEntityIfPossible() ?: return@findAll false
             return@findAll entry.identifier?.startsWith(paramPrefix) ?: false

@@ -7,13 +7,13 @@ class AutoParseTests {
         val thoughts = entity("thoughts") { repeat(max = 100) { range("\\\"\\n", true) } }
 
         val allFunctions = it.functions.values.map {func ->
-            entity("function_${func.name}") {
+            entity("function-${func.name}") {
                 literal(func.name + "\n--params--\n")
                 for (param in func.params.values) {
                     if (param.optional) {
                         optional {
                             literal("${param.name}: ")
-                            entity("param_${func.name}_${param.name}") currentParam@{
+                            entity("param-${func.name}-${param.name}") currentParam@{
                                 param.addGBNFRule(this@currentParam) // Value part
                             }() // Immediately insert it after declaring
                             literal("\n")
@@ -21,7 +21,7 @@ class AutoParseTests {
                     }
                     else {
                         literal("${param.name}: ")
-                        entity("param_${func.name}_${param.name}") currentParam@{
+                        entity("param-${func.name}-${param.name}") currentParam@{
                             param.addGBNFRule(this@currentParam) // Value part
                         }() // Immediately insert it after declaring
                         literal("\n")
