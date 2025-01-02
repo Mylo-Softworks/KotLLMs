@@ -1,3 +1,5 @@
+[![](https://www.jitpack.io/v/Mylo-Softworks/KotLLMs.svg)](https://www.jitpack.io/#Mylo-Softworks/KotLLMs)
+
 # KotLLMs (Kotlin LLMs)
 An experimental library for calling LLM apis from Kotlin.
 
