@@ -17,10 +17,10 @@ import com.mylosoftworks.kotllms.functions.*
 
 val functions = FunctionDefs {
     function("print", "Prints a piece of text to the user.") {
-        addParam(FunctionParameterString("value", false, "The value to print to the user"))
+        val value = addParam(FunctionParameterString("value", false, "The value to print to the user"))
 
         callback = {
-            println("Print: ${it["value"]?.second}")
+            println("Print: ${value(it)}") // Invoking "value" with "it" is a quick and safe way to obtain the value in this context
         }
     }
 }
@@ -81,5 +81,3 @@ val autoParsedExample = AutoParsedGrammarDef {
     }
 }
 ```
-
-TODO: Add better DSL for function calling which would allow parameters to be defined through a delegate, and accessed as if it were a regular variable.

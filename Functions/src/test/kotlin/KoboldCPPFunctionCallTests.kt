@@ -14,10 +14,10 @@ class KoboldCPPFunctionCallTests {
     fun testSimpleFunctionOneRequest() {
         val functions = FunctionDefs {
             function("print", "Prints a piece of text to the user.") {
-                addParam(FunctionParameterString("value", false, "The value to print to the user"))
+                val value = addParam(FunctionParameterString("value", false, "The value to print to the user"))
 
                 callback = {
-                    println("Print: ${it["value"]?.second}")
+                    println("Print: ${value(it)}")
                 }
             }
         }

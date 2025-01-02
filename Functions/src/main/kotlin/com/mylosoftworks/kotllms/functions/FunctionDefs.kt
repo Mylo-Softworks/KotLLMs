@@ -5,6 +5,7 @@ import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.api.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.features.impl.ChatGen
+import kotlin.reflect.KProperty
 
 /**
  * Base class for function definitions.
@@ -58,15 +59,19 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
         initParams()
     }
 
-    fun addParam(param: FunctionParameter<*>) {
+    fun <T: FunctionParameter<*>> addParam(param: T): T {
         params[param.name] = (param)
+        return param
     }
 }
 
 abstract class FunctionParameter<T>(var name: String, var optional: Boolean = false, var comment: String? = null, val typeName: String) {
-
     abstract fun addGBNFRule(gbnf: GBNFEntity)
     abstract fun parseProvidedParams(string: String): T
+
+    operator fun invoke(map: HashMap<String, Pair<FunctionParameter<*>, Any?>>): T? {
+        return map[name]?.second as T?
+    }
 }
 
 class FunctionParameterString(name: String, optional: Boolean = false, comment: String? = null, val maxLength: Int = 999999) : FunctionParameter<String>(name, optional, comment, "String") {

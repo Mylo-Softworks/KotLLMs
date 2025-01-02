@@ -42,10 +42,11 @@ class AutoParseTests {
 
     val exampleFunctions = FunctionDefs(autoParsedExample) {
         function("print") {
-            addParam(FunctionParameterString("value", false, "The value to print to the user"))
+            val value = addParam(FunctionParameterString("value", false, "The value to print to the user"))
 
             callback = {
-                println("Print: ${it["value"]?.second}")
+
+                println("Print: ${value(it)}")
             }
         }
     }
