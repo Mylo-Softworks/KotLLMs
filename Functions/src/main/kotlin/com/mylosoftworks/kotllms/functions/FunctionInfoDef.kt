@@ -2,7 +2,7 @@ package com.mylosoftworks.kotllms.functions
 
 abstract class FunctionInfoDef {
     abstract fun getInfoForAllFunctions(functionDefs: FunctionDefs): String
-    abstract fun getInfoForFunction(functionDefinition: FunctionDefinition): String
+    abstract fun getInfoForFunction(functionDefinition: FunctionDefinition<*>): String
     abstract fun getInfoForParameter(functionParameter: FunctionParameter<*>): String
 }
 
@@ -16,7 +16,7 @@ object DefaultFunctionInfoDef : FunctionInfoDef() {
         }
     }
 
-    override fun getInfoForFunction(functionDefinition: FunctionDefinition): String {
+    override fun getInfoForFunction(functionDefinition: FunctionDefinition<*>): String {
         val name = functionDefinition.name
         val comment = functionDefinition.comment
         val params = functionDefinition.params

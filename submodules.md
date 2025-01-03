@@ -16,7 +16,7 @@ Example of a function definition (To define one function named "print" which pri
 import com.mylosoftworks.kotllms.functions.*
 
 val functions = FunctionDefs {
-    function("print", "Prints a piece of text to the user.") {
+    function<Unit>("print", "Prints a piece of text to the user.") {
         val value = addParam(FunctionParameterString("value", false, "The value to print to the user"))
 
         callback = {
@@ -81,3 +81,5 @@ val autoParsedExample = AutoParsedGrammarDef {
     }
 }
 ```
+
+TODO: Support for multiple functions in one call, using the same original function calling syntax

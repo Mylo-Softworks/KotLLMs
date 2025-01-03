@@ -7,7 +7,7 @@ import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
  * A grammar definition used for function calling, used for parsing function calls etc
  */
 abstract class FunctionGrammarDef {
-    abstract fun parseFunctionCall(defs: FunctionDefs, response: String): Result<Triple<String, (suspend () -> Unit)?, String>>
+    abstract fun parseFunctionCall(defs: FunctionDefs, response: String): Result<Triple<String, (suspend () -> Any?)?, String>>
     abstract fun getFunctionsGrammar(defs: FunctionDefs): GBNF
 }
 
@@ -19,13 +19,13 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
     override fun parseFunctionCall(
         defs: FunctionDefs,
         response: String
-    ): Result<Triple<String, (suspend () -> Unit)?, String>> {
+    ): Result<Triple<String, (suspend () -> Any?)?, String>> {
         val (funcAndComment, params) = response.split("\n$paramsSplit\n")
         val (function, thoughts) = getTargettedFunctionFromResponse(defs, funcAndComment).getOrElse { return Result.failure(it) }
-        return Result.success(Triple(response, function.let { { it.callback(getParametersFromResponse(it, params)) } }, thoughts))
+        return Result.success(Triple(response, function.let { { it.runCallBackWithParams(getParametersFromResponse(it, params)) } }, thoughts))
     }
 
-    fun getTargettedFunctionFromResponse(defs: FunctionDefs, fullResponse: String): Result<Pair<FunctionDefinition, String>> {
+    fun getTargettedFunctionFromResponse(defs: FunctionDefs, fullResponse: String): Result<Pair<FunctionDefinition<*>, String>> {
         val regexResult = callRegex.find(fullResponse)
         val thoughts = regexResult?.groups?.get(1)?.value ?: "" // 1 is thoughts
         val call = regexResult?.groups?.get(2)?.value // 2 is function name
@@ -53,7 +53,7 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
         }
     }
 
-    fun applyGrammarForFunction(funcDef: FunctionDefinition, entity: GBNFEntity) {
+    fun applyGrammarForFunction(funcDef: FunctionDefinition<*>, entity: GBNFEntity) {
         entity.apply {
             for (param in funcDef.params.values) {
                 if (param.optional) {
@@ -72,7 +72,7 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
         }
     }
 
-    fun getParametersFromResponse(funcDef: FunctionDefinition, fullResponse: String): HashMap<String, Pair<FunctionParameter<*>, Any?>> {
+    fun getParametersFromResponse(funcDef: FunctionDefinition<*>, fullResponse: String): HashMap<String, Pair<FunctionParameter<*>, Any?>> {
         val regexMatches = paramsRegex.findAll(fullResponse)
         val outputMap = HashMap<String, Pair<FunctionParameter<*>, Any?>>()
 
@@ -99,7 +99,7 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
     override fun parseFunctionCall(
         defs: FunctionDefs,
         response: String
-    ): Result<Triple<String, (suspend () -> Unit)?, String>> {
+    ): Result<Triple<String, (suspend () -> Any?)?, String>> {
         val grammar = getFunctionsGrammar(defs)
 
         val (parsedTree, _) = grammar.parse(response).getOrElse { return Result.failure(it) }
@@ -128,7 +128,7 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
             paramsMap[paramName] = param to param.parseProvidedParams(it.strValue)
         }
 
-        return Result.success(Triple(response, { function.callback(paramsMap) }, thoughtsOrEmpty))
+        return Result.success(Triple(response, { function.runCallBackWithParams(paramsMap) }, thoughtsOrEmpty))
     }
 
     override fun getFunctionsGrammar(defs: FunctionDefs): GBNF {

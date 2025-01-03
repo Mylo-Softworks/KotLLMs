@@ -5,7 +5,6 @@ import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.api.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.features.impl.ChatGen
-import kotlin.reflect.KProperty
 
 /**
  * Base class for function definitions.
@@ -17,14 +16,16 @@ class FunctionDefs(
     val functionInfoDef: FunctionInfoDef = DefaultFunctionInfoDef,
     initFunctions: FunctionDefs.() -> Unit = {}
 ) {
-    val functions: HashMap<String, FunctionDefinition> = hashMapOf()
+    val functions: HashMap<String, FunctionDefinition<*>> = hashMapOf()
 
     init {
         initFunctions()
     }
 
-    fun function(name: String, comment: String? = null, initParams: FunctionDefinition.() -> Unit = {}) {
-        functions[name] = FunctionDefinition(name, comment, initParams)
+    fun <T> function(name: String, comment: String? = null, initParams: FunctionDefinition<T>.() -> Unit = {}): FunctionDefinition<T> {
+        val func = FunctionDefinition(name, comment, initParams)
+        functions[name] = func
+        return func
     }
 
 
@@ -42,7 +43,7 @@ class FunctionDefs(
     /**
      * Create the function call in a single request, uses a different grammar, makes longer responses
      */
-    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCallSingleRequest(api: T, flags: F, chatDef: D): Result<Triple<String, (suspend () -> Unit)?, String>> {
+    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCallSingleRequest(api: T, flags: F, chatDef: D): Result<Triple<String, (suspend () -> Any?)?, String>> {
         flags.applyGrammar(getGrammarForAllCallsSingleRequest())
         flags.enableEarlyStopping(false)
         val response = api.chatGen(chatDef, flags).getText()
@@ -51,9 +52,9 @@ class FunctionDefs(
     }
 }
 
-class FunctionDefinition(val name: String, val comment: String? = null, initParams: FunctionDefinition.() -> Unit = {}) {
+class FunctionDefinition<T>(val name: String, val comment: String? = null, initParams: FunctionDefinition<T>.() -> Unit = {}) {
     val params: HashMap<String, FunctionParameter<*>> = hashMapOf()
-    var callback: suspend (HashMap<String, Pair<FunctionParameter<*>, Any?>>) -> Unit = {}
+    var callback: (suspend (HashMap<String, Pair<FunctionParameter<*>, Any?>>) -> T)? = null
 
     init {
         initParams()
@@ -62,6 +63,11 @@ class FunctionDefinition(val name: String, val comment: String? = null, initPara
     fun <T: FunctionParameter<*>> addParam(param: T): T {
         params[param.name] = (param)
         return param
+    }
+
+    suspend fun runCallBackWithParams(params: HashMap<String, Pair<FunctionParameter<*>, Any?>>): T? {
+        val nonNullCB = callback ?: return null
+        return nonNullCB(params)
     }
 }
 
