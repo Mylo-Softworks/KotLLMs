@@ -70,7 +70,7 @@ class AutoParseTests {
 
         // Invoke the print function
         runBlocking {
-            call?.invoke()
+            call[0].invoke()
         }
     }
 }

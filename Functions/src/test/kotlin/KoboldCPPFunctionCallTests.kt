@@ -55,9 +55,9 @@ class KoboldCPPFunctionCallTests {
             val givenChat =
                 exampleChat.subChat<ChatDef<BasicChatMessage>>(9, mutableListOf(systemMessage, functionList))
 
-            val (_, func, comment) = functions.requestFunctionCallSingleRequest(api, flags, givenChat).getOrThrow()
+            val (_, funcs, comment) = functions.requestFunctionCallSingleRequest(api, flags, givenChat).getOrThrow()
             println("Comment: $comment")
-            func?.let { it() }
+            funcs[0]()
         }
     }
 }

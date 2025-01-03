@@ -81,5 +81,3 @@ val autoParsedExample = AutoParsedGrammarDef {
     }
 }
 ```
-
-TODO: Support for multiple functions in one call, using the same original function calling syntax
