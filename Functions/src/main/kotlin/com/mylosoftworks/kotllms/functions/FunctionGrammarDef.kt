@@ -38,7 +38,7 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
     override fun getFunctionsGrammar(defs: FunctionDefs): GBNF {
         return GBNF {
             literal("Thoughts: \"")
-            repeat(max = maxThoughtLength) { range("\\\"\\n", true) }
+            repeat(max = maxThoughtLength) { range("\"\n", true) }
             literal("\"\nCall: ")
             val entities = mutableListOf<GBNFEntity>()
             defs.functions.values.forEach {
@@ -135,31 +135,6 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
         }
 
         return Result.success(Triple(response, outList, thoughtsOrEmpty))
-
-        // OLD
-        // Find which function was called
-        val functionCall = parsedTree.find(includeSelf = false) {parsed ->
-            val entry = parsed.getAsEntityIfPossible() ?: return@find false
-            return@find entry.identifier?.startsWith("function-") ?: false
-        } ?: return Result.success(Triple(response, listOf(), thoughtsOrEmpty))
-
-        val functionName = (functionCall.associatedEntry as GBNFEntity).identifier!!.substring("function-".length)
-        val function = defs.functions[functionName] ?: return Result.success(Triple(response, listOf(), thoughtsOrEmpty))
-        val paramsMap = hashMapOf<String, Pair<FunctionParameter<*>, Any?>>()
-        // Find all defined parameters
-        val paramPrefix = "param-${function.name}-"
-        val definedParams = functionCall.findAll {parsed ->
-            val entry = parsed.getAsEntityIfPossible() ?: return@findAll false
-            return@findAll entry.identifier?.startsWith(paramPrefix) ?: false
-        }
-
-        definedParams.map {
-            val paramName = (it.associatedEntry as GBNFEntity).identifier!!.substring(paramPrefix.length)
-            val param = function.params[paramName] ?: return Result.success(Triple(response, listOf(), thoughtsOrEmpty))
-            paramsMap[paramName] = param to param.parseProvidedParams(it.strValue)
-        }
-
-        return Result.success(Triple(response, listOf({ function.runCallBackWithParams(paramsMap) }), thoughtsOrEmpty))
     }
 
     override fun getFunctionsGrammar(defs: FunctionDefs): GBNF {

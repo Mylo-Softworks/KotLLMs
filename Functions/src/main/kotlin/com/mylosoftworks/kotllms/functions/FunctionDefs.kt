@@ -87,7 +87,7 @@ class FunctionParameterString(name: String, optional: Boolean = false, comment: 
             repeat(max = maxLength) {
                 oneOf {
                     literal("\\\"") // Should allow escaping without triggering end of string
-                    range("\"\\n", true) // [^"\n]
+                    range("\"\n", true) // [^"\n]
                 }
             }
             literal("\"")

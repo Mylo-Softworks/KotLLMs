@@ -1,10 +1,11 @@
+import com.mylosoftworks.gbnfkotlin.rules.GBNFLiteralRule
 import com.mylosoftworks.kotllms.functions.*
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 
 class AutoParseTests {
     val autoParsedExample = AutoParsedGrammarDef {
-        val thoughts = entity("thoughts") { repeat(max = 100) { range("\\\"\\n", true) } }
+        val thoughts = entity("thoughts") { repeat(max = 100) { range("\"\n", true) } }
 
         val allFunctions = it.functions.values.map {func ->
             entity("function-${func.name}") {
@@ -33,6 +34,7 @@ class AutoParseTests {
         literal("Thoughts: \"")
         thoughts()
         literal("\"\nCall: ")
+
         oneOf {
             allFunctions.forEach {
                 it()
