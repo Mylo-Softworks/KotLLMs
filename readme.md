@@ -83,6 +83,8 @@ result.registerStreamer {
 
 ## Performing a chat generation call
 > Chat generations require apis which implement the ChatGen interface, some apis implement chats in raw gens with templates
+
+> Custom chat templates can be created by extending `ChatTemplate`, using `ChatTemplateDSL`.
 ```kotlin
 val exampleChat = ChatDef<BasicTemplatedChatMessage>()
 exampleChat.addMessage(BasicTemplatedChatMessage().init {
