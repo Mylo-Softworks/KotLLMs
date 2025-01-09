@@ -31,7 +31,7 @@ publishing {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:c6d91d65f4")
+    implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:1f0211e0cb")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
