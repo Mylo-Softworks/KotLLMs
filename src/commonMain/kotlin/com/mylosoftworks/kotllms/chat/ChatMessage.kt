@@ -1,6 +1,6 @@
 package com.mylosoftworks.kotllms.chat
 
-import java.awt.image.BufferedImage
+import com.mylosoftworks.kotllms.shared.AttachedImage
 import kotlin.reflect.KProperty
 
 /**
@@ -13,7 +13,7 @@ abstract class ChatMessage<T : ChatMessage<T>> {
 
     abstract fun setTextContent(content: String) // Text content implementation, usually involves setting a flag
 
-    open fun getAttachedImages(): List<BufferedImage> {
+    open fun getAttachedImages(): List<AttachedImage> {
         return listOf()
     }
 
@@ -30,9 +30,9 @@ open class BasicChatMessage : ChatMessage<BasicChatMessage>() { // Open class, s
     var role by MessageFlag<String>()
     var content by MessageFlag<String>()
 
-    var images = listOf<BufferedImage>()
+    var images = listOf<AttachedImage>()
 
-    override fun getAttachedImages(): List<BufferedImage> = images
+    override fun getAttachedImages(): List<AttachedImage> = images
 
     override fun setTextContent(content: String) {
         this.content = content
@@ -42,7 +42,7 @@ open class BasicChatMessage : ChatMessage<BasicChatMessage>() { // Open class, s
 class MessageFlag<T> {
     operator fun <U : ChatMessage<U>> getValue(thisRef: U, property: KProperty<*>): T? {
         @Suppress("UNCHECKED_CAST")
-        return thisRef.setFlags.getOrDefault(property.name, null) as T?
+        return thisRef.setFlags.getOrElse(property.name) { null } as T?
     }
 
     operator fun <U : ChatMessage<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
@@ -57,7 +57,7 @@ class MessageFlag<T> {
 class MessageOneWayConvertedFlag<T, V>(val convert: (T) -> V) {
     operator fun <U : ChatMessage<U>> getValue(thisRef: U, property: KProperty<*>): Any? {
         @Suppress("UNCHECKED_CAST")
-        return thisRef.setFlags.getOrDefault(property.name, null) as V?
+        return thisRef.setFlags.getOrElse(property.name) { null } as V?
     }
 
     operator fun <U : ChatMessage<U>> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
@@ -72,7 +72,7 @@ class MessageOneWayConvertedFlag<T, V>(val convert: (T) -> V) {
 class MessageTwoWayConvertedFlag<T, V>(val convertTo: (T) -> V, val convertFrom: (V) -> T) {
     operator fun <U : ChatMessage<U>> getValue(thisRef: U, property: KProperty<*>): Any? {
         @Suppress("UNCHECKED_CAST")
-        return (thisRef.setFlags.getOrDefault(property.name, null) as V?)?.let { convertFrom(it) }
+        return (thisRef.setFlags.getOrElse(property.name) { null } as V?)?.let { convertFrom(it) }
     }
 
     operator fun <U : ChatMessage<U>> setValue(thisRef: U, property: KProperty<*>, value: Any?) {

@@ -1,13 +1,15 @@
 package api
 
-import com.mylosoftworks.com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.StreamedGenerationResult
 import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
+import com.mylosoftworks.kotllms.api.toJson
 import com.mylosoftworks.kotllms.chat.BasicChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.shared.toAttached
 import kotlinx.coroutines.runBlocking
 import javax.imageio.ImageIO
 import kotlin.io.path.Path
@@ -47,8 +49,8 @@ class KoboldCPPTests {
             temperature = 0.7f
         }
         val test = hashMapOf(
-            "prompt" to "This is a prompt",
-            "temperature" to 0.7f
+            "prompt" to "This is a prompt".toJson(),
+            "temperature" to 0.7f.toJson()
         )
         assert(flags.setFlags == test) {"Flags didn't match"}
     }
@@ -153,7 +155,7 @@ bot:
         exampleChat.addMessage(BasicChatMessage().init {
             content = "What do you see in this image?"
             role = "user"
-            images = listOf(image)
+            images = listOf(image.toAttached())
         })
         api.settings.template = Llama3Template()
 

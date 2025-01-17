@@ -2,44 +2,28 @@ package com.mylosoftworks.kotllms.api.impl
 
 import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.*
-import com.mylosoftworks.kotllms.base64ToImage
 import com.mylosoftworks.kotllms.chat.BasicChatMessage
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 import com.mylosoftworks.kotllms.features.impl.*
+import com.mylosoftworks.kotllms.jsonSettings
+import com.mylosoftworks.kotllms.shared.AttachedImage
+import com.mylosoftworks.kotllms.shared.createKtorClient
 import com.mylosoftworks.kotllms.stripTrailingSlash
-import com.mylosoftworks.kotllms.toBase64
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import kotlinx.serialization.serializer
-import java.awt.image.BufferedImage
 import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags>,
     RawGen<KoboldCPPGenFlags>, ChatGen<KoboldCPPGenFlags, ChatDef<BasicChatMessage>> {
 
-    val client = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json()
-        }
-        install(SSE)
-
-        engine {
-            maxConnectionsCount = 4
-            requestTimeout = 30000
-        }
-    }
+    val client = createKtorClient()
 
     private fun getApiUrl(path: String) = settings.url + path
     private suspend fun makeHttpGet(path: String): HttpResponse {
@@ -47,21 +31,19 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
             settings.applyToRequest(this)
         }
     }
-    @OptIn(InternalSerializationApi::class)
-    private suspend fun makeHttpPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, Any>.() -> Unit = {}): HttpResponse {
+
+    private suspend fun makeHttpPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): HttpResponse {
         return client.post(getApiUrl(path)) {
             settings.applyToRequest(this)
 
             contentType(ContentType.Application.Json)
             extraSettings(this)
             setBody(
-                hashMapOf<String, Any>().apply(block).apply {flags.applyToRequestJson(this)}
-                    .mapValues { Json.encodeToJsonElement(it.value.javaClass.kotlin.serializer(), it.value) }
+                hashMapOf<String, JsonElement>().apply(block).apply {flags.applyToRequestJson(this)}
             )
         }
     }
 
-    @OptIn(InternalSerializationApi::class)
     private suspend fun makeHttpSSEPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit) {
         client.sse(getApiUrl(path), {
             method = HttpMethod.Post
@@ -69,10 +51,10 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
             settings.applyToRequest(this)
 
             contentType(ContentType.Application.Json)
+
             extraSettings(this)
             setBody(
-                hashMapOf<String, Any>().apply {flags.applyToRequestJson(this)}
-                    .mapValues { Json.encodeToJsonElement(it.value.javaClass.kotlin.serializer(), it.value) }
+                hashMapOf<String, JsonElement>().apply {flags.applyToRequestJson(this)}
             )
         }, block = block)
     }
@@ -86,12 +68,12 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     }
 
     override suspend fun version(): KoboldCPPVersion {
-        return makeHttpGet("/api/extra/version").bodyAsText().let { Json.decodeFromString(it) }
+        return makeHttpGet("/api/extra/version").bodyAsText().let { jsonSettings.decodeFromString(it) }
     }
 
     override suspend fun getCurrentModel(): KoboldCPPModel {
         return makeHttpGet("/api/v1/model").bodyAsText().let {
-            Json.parseToJsonElement(it).jsonObject["result"]?.jsonPrimitive?.content?.let { it2 ->
+            jsonSettings.parseToJsonElement(it).jsonObject["result"]?.jsonPrimitive?.content?.let { it2 ->
                 KoboldCPPModel(it2)
             } ?: error("Invalid response")
         }
@@ -99,14 +81,14 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
 
     override suspend fun contextLength(): Int {
         return makeHttpGet("/api/extra/true_max_context_length").bodyAsText()
-            .let { Json.decodeFromString<RawResponses.ContextLength>(it).value }
+            .let { jsonSettings.decodeFromString<RawResponses.ContextLength>(it).value }
     }
 
     override suspend fun tokenCount(string: String, flags: KoboldCPPGenFlags?): Int {
         return makeHttpPost("/api/extra/tokencount", flags ?: KoboldCPPGenFlags()) {
-            set("prompt", string)
+            set("prompt", string.toJson())
         }.bodyAsText().let {
-            Json.parseToJsonElement(it).jsonObject["value"]?.jsonPrimitive?.int ?: error("Invalid response")
+            jsonSettings.parseToJsonElement(it).jsonObject["value"]?.jsonPrimitive?.int ?: error("Invalid response")
         }
     }
 
@@ -121,7 +103,7 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
                                 if (event.event == "message") {
                                     val data = event.data
                                     if (data != null) {
-                                        val newChunk = Json.decodeFromString<KoboldCPPStreamChunk>(data)
+                                        val newChunk = jsonSettings.decodeFromString<KoboldCPPStreamChunk>(data)
                                         it.update(newChunk)
                                         lastChunk = newChunk
                                     }
@@ -187,13 +169,14 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
     var top_k by Flag<Int>()
     var top_p by Flag<Float>()
     var typical by Flag<Float>()
-    var stop_sequence by BiConvertedJsonFlag<List<String>>({ Json.encodeToJsonElement(it) },
+    var stop_sequence by BiConvertedJsonFlag<List<String>>({ jsonSettings.encodeToJsonElement(it) },
         { it.jsonArray.map { it.jsonPrimitive.content }.toList() })
     var trim_stop by Flag<Boolean>()
     var bypass_eos by Flag<Boolean>() // Set to false to prevent early stopping
 
-    var images by BiConvertedJsonFlag<List<BufferedImage>>({ Json.encodeToJsonElement(it.map { it.toBase64() }) },
-        { it.jsonArray.map { base64ToImage(it.jsonPrimitive.content) }.toList() })
+//    var images by BiConvertedJsonFlag<List<AttachedImage>>({ Json.encodeToJsonElement(it.map { it.toBase64() }) },
+//        { it.jsonArray.map { AttachedImage(it.jsonPrimitive.content) }.toList() })
+    var images by Flag<List<AttachedImage>>() // AttachedImage is serializable
 
     var stream: Boolean = false // Not an actual flag, but changes behavior
 
@@ -203,7 +186,7 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
             setFlags.remove("grammar")
             return
         }
-        setFlags["grammar"] = gbnf
+        setFlags["grammar"] = gbnf.toJson()
     }
 
     override fun applyGrammar(grammar: GBNF) {
@@ -232,7 +215,7 @@ object RawResponses {
 class KoboldCPPGenerationResults(json: String, val api: KoboldCPP) : GenerationResult(false), Cancellable {
     lateinit var content: String
     init {
-        Json.parseToJsonElement(json).jsonObject.let {root ->
+        jsonSettings.parseToJsonElement(json).jsonObject.let {root ->
             root["results"]!!.jsonArray.let {results ->
                 results[0].jsonObject.let {result ->
                     content = result["text"]!!.jsonPrimitive.content

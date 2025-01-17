@@ -1,16 +1,31 @@
 package com.mylosoftworks.kotllms.api
 
 import com.mylosoftworks.gbnfkotlin.GBNF
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.*
 import kotlin.reflect.KProperty
+
+// Polymorphic json-serializable classes for some types
+fun Any.toJson() = when (this) {
+    is String -> Json.encodeToJsonElement(this)
+    is Int -> Json.encodeToJsonElement(this)
+    is Float -> Json.encodeToJsonElement(this)
+    is Boolean -> Json.encodeToJsonElement(this)
+    else -> TODO()
+}
+fun JsonElement.getPrimitiveValue(): Any? {
+    val primitive = this.jsonPrimitive
+    return primitive.booleanOrNull ?: primitive.intOrNull ?: primitive.floatOrNull ?: primitive.contentOrNull
+}
+
 
 /**
  * Base class for flags, which contain extra information for a generation, such as the sampling temperature.
  */
 abstract class Flags<T : Flags<T>> {
-    val setFlags = hashMapOf<String, Any>()
+//    val setFlags = hashMapOf<String, Any>()
+    val setFlags = hashMapOf<String, JsonElement>()
 
-    fun applyToRequestJson(map: HashMap<String, Any>) {
+    fun applyToRequestJson(map: HashMap<String, JsonElement>) {
         map.putAll(setFlags)
     }
 
@@ -28,7 +43,7 @@ abstract class Flags<T : Flags<T>> {
 class Flag<T> {
     operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
         @Suppress("UNCHECKED_CAST")
-        return thisRef.setFlags.getOrDefault(property.name, null) as T?
+        return thisRef.setFlags.getOrElse(property.name) { null }?.getPrimitiveValue() as T?
     }
 
     operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
@@ -36,14 +51,14 @@ class Flag<T> {
             thisRef.setFlags.remove(property.name)
             return
         }
-        thisRef.setFlags[property.name] = value
+        thisRef.setFlags[property.name] = value.toJson()
     }
 }
 
 class ConvertedFlag<T, V>(val convert: (T) -> V) {
     operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): Any? {
         @Suppress("UNCHECKED_CAST")
-        return thisRef.setFlags.getOrDefault(property.name, null) as V?
+        return thisRef.setFlags.getOrElse(property.name) { null }?.getPrimitiveValue() as V?
     }
 
     operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
@@ -51,13 +66,13 @@ class ConvertedFlag<T, V>(val convert: (T) -> V) {
             thisRef.setFlags.remove(property.name)
             return
         }
-        thisRef.setFlags[property.name] = convert(value as T)!!
+        thisRef.setFlags[property.name] = convert(value as T)!!.toJson()
     }
 }
 
 class BiConvertedStringFlag<T>(val convert: (T) -> String, val unConvert: (String) -> T) {
     operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
-        return unConvert(thisRef.setFlags.getOrDefault(property.name, null).toString())
+        return unConvert(thisRef.setFlags.getOrElse(property.name) { null }?.getPrimitiveValue().toString())
     }
 
     operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
@@ -65,13 +80,13 @@ class BiConvertedStringFlag<T>(val convert: (T) -> String, val unConvert: (Strin
             thisRef.setFlags.remove(property.name)
             return
         }
-        thisRef.setFlags[property.name] = convert(value)
+        thisRef.setFlags[property.name] = convert(value).toJson()
     }
 }
 
 class BiConvertedJsonFlag<T>(val convert: (T) -> JsonElement, val unConvert: (JsonElement) -> T) {
     operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
-        return (thisRef.setFlags.getOrDefault(property.name, null) as JsonElement?)?.let { unConvert(it) }
+        return (thisRef.setFlags.getOrElse(property.name) { null } as JsonElement?)?.let { unConvert(it) }
     }
 
     operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
@@ -79,7 +94,7 @@ class BiConvertedJsonFlag<T>(val convert: (T) -> JsonElement, val unConvert: (Js
             thisRef.setFlags.remove(property.name)
             return
         }
-        thisRef.setFlags[property.name] = convert(value)
+        thisRef.setFlags[property.name] = convert(value).toJson()
     }
 }
 

@@ -11,7 +11,7 @@ import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 class Llama3Template(val startToken: Boolean = true, val roleMap: Map<String, String> = mapOf()): ChatTemplate() {
     override fun formatChat(def: ChatDef<*>): String {
         return def.messages.joinToString(" ", if (startToken) "<|begin_of_text|>" else "") {
-            createMessage(it["role"].toString().let { roleMap.getOrDefault(it, it) }, it["content"].toString())
+            createMessage(it["role"].toString().let { roleMap.getOrElse(it) { it } }, it["content"].toString())
         } + createHeader("assistant")
     }
 
