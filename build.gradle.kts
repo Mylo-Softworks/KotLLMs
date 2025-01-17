@@ -20,12 +20,12 @@ repositories {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            from(components["kotlin"])
-            groupId = "com.mylosoftworks"
-            artifactId = "KotLLMs"
-            version = "1.0"
-        }
+//        create<MavenPublication>("maven") {
+//            from(components["kotlin"])
+//            groupId = "com.mylosoftworks"
+//            artifactId = "KotLLMs"
+//            version = "1.0"
+//        }
     }
 }
 
