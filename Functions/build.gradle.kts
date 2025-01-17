@@ -1,7 +1,7 @@
 import java.net.URI
 
 plugins {
-    kotlin("jvm")
+    kotlin("multiplatform") version "2.0.20"
     id("maven-publish")
 }
 
@@ -26,22 +26,27 @@ publishing {
     }
 }
 
-dependencies {
-    testImplementation(kotlin("test"))
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-
-    implementation(project(":"))
-
-    implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:1f0211e0cb")
-
-    implementation(kotlin("reflect"))
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
 kotlin {
-    jvmToolchain(11)
+    jvm()
+    js {
+        browser()
+        nodejs()
+    }
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+                implementation(project(":"))
+                implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:1f0211e0cb")
+                implementation(kotlin("reflect"))
+            }
+        }
+
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
 }

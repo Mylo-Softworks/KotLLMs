@@ -1,17 +1,29 @@
 package com.mylosoftworks.kotllms.api
 
 import com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.kotllms.jsonSettings
 import kotlinx.serialization.json.*
 import kotlin.reflect.KProperty
 
-// Polymorphic json-serializable classes for some types
-fun Any.toJson() = when (this) {
-    is String -> Json.encodeToJsonElement(this)
-    is Int -> Json.encodeToJsonElement(this)
-    is Float -> Json.encodeToJsonElement(this)
-    is Boolean -> Json.encodeToJsonElement(this)
-    else -> TODO()
+interface ToJson {
+    fun toJson(): JsonElement
 }
+// Polymorphic json-serializable classes for some types
+fun Any?.toJson(): JsonElement = when (this) {
+    is JsonElement -> this
+    is ToJson -> this.toJson()
+
+    is String -> jsonSettings.encodeToJsonElement(this)
+    is Int -> jsonSettings.encodeToJsonElement(this)
+    is Float -> jsonSettings.encodeToJsonElement(this)
+    is Boolean -> jsonSettings.encodeToJsonElement(this)
+    is List<*> -> jsonSettings.encodeToJsonElement(this.map { it.toJson() })
+    is Array<*> -> jsonSettings.encodeToJsonElement(this.map { it.toJson() })
+    is HashMap<*, *> -> jsonSettings.encodeToJsonElement(this.mapKeys { it.toString() }.mapValues { it.toJson() })
+    null -> JsonNull
+    else -> TODO(this.toString())
+}
+
 fun JsonElement.getPrimitiveValue(): Any? {
     val primitive = this.jsonPrimitive
     return primitive.booleanOrNull ?: primitive.intOrNull ?: primitive.floatOrNull ?: primitive.contentOrNull
