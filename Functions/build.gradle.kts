@@ -38,7 +38,7 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
                 implementation(project(":"))
-                implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:1f0211e0cb")
+                implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:8c5eb3c4f7")
                 implementation(kotlin("reflect"))
             }
         }

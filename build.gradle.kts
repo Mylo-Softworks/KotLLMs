@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import java.net.URI
 
 val ktor_version: String by project
@@ -35,6 +36,11 @@ kotlin {
         browser()
         nodejs()
     }
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
 
     sourceSets {
         commonTest.dependencies {
@@ -43,7 +49,7 @@ kotlin {
 
         commonMain {
             dependencies {
-                implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:1f0211e0cb")
+                implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:8c5eb3c4f7")
 
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 

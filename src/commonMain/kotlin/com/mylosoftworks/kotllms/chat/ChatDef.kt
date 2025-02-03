@@ -29,7 +29,7 @@ class ChatDef<M : ChatMessage<M>> {
         return clone
     }
 
-    fun deepClone(): ChatDef<M> {
+    fun clone(): ChatDef<M> {
         val clone = this.createNew()
         clone.messages = messages.toMutableList() // Copies the list
         return clone
