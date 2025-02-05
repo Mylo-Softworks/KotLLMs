@@ -13,3 +13,9 @@ inline fun <reified T> Any.runIfImpl(block: (T).() -> Unit) {
 }
 
 inline fun <reified T> Any.tryCast() = this as? T
+
+// Union type
+typealias Union<A, B> = Pair<A?, B?>
+fun Union<*, *>.nonNull() = first ?: second ?: error("Both fields were null")
+fun <T, O> T.toUnion1() = Union<T, O>(this, null)
+fun <T, O> T.toUnion2() = Union<O, T>(null, this)

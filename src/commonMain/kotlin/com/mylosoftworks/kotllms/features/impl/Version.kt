@@ -1,9 +1,8 @@
 package com.mylosoftworks.kotllms.features.impl
 
-import com.mylosoftworks.kotllms.features.Feature
 import kotlinx.serialization.Serializable
 
-interface Version<V : VersionInfo> : Feature {
+interface Version<V : VersionInfo> {
     suspend fun version(): V
 }
 

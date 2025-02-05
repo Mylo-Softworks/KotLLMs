@@ -1,13 +1,11 @@
 package com.mylosoftworks.kotllms.features.impl
 
-import com.mylosoftworks.kotllms.features.Feature
-
-interface ListModels<D : ListedModelDef> : Feature {
+interface ListModels<D : ListedModelDef> {
     suspend fun listModels(): List<D>
 }
 
 open class ListedModelDef(val modelName: String)
 
-interface GetCurrentModel<D : ListedModelDef> : Feature {
+interface GetCurrentModel<D : ListedModelDef> {
     suspend fun getCurrentModel(): D
 }

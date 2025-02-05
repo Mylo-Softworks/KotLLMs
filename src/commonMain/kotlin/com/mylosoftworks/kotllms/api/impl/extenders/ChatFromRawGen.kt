@@ -1,19 +1,25 @@
 package com.mylosoftworks.kotllms.api.impl.extenders
 
+import com.mylosoftworks.kotllms.Union
 import com.mylosoftworks.kotllms.api.API
 import com.mylosoftworks.kotllms.api.GenerationResult
+import com.mylosoftworks.kotllms.api.Settings
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.ChatMessage
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 import com.mylosoftworks.kotllms.features.Flags
+import com.mylosoftworks.kotllms.features.Wrapper
 import com.mylosoftworks.kotllms.features.flagsimpl.*
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.runIfImpl
+import com.mylosoftworks.kotllms.toUnion2
+import kotlin.reflect.KClass
 
 @Suppress("unchecked_cast")
-class ChatFromRawGen<F: Flags<*>, A: API<*, F>> internal constructor(val api: A, var template: ChatTemplate): RawGen<F> by api as RawGen<F>, ChatGen<F, ChatMessage> {
+class ChatFromRawGen<F: Flags<*>, S: Settings, A: API<S, F>> internal constructor(val api: Wrapper<A>, var template: ChatTemplate):
+    RawGen<F> by api.getWrapped() as RawGen<F>, ChatGen<F, ChatMessage>, Wrapper<A> {
     override suspend fun <M2 : ChatMessage> chatGen(chatDef: ChatDef<M2>, flags: F?): GenerationResult {
-        val validFlags = flags ?: api.createFlags()
+        val validFlags = flags ?: api.getWrapped().createFlags()
 
         validFlags.runIfImpl<FlagTrimStop> {
             trimStop = trimStop ?: true
@@ -30,6 +36,9 @@ class ChatFromRawGen<F: Flags<*>, A: API<*, F>> internal constructor(val api: A,
 
         return rawGen(validFlags)
     }
+
+    override fun getLinked(): Union<A, Wrapper<A>> = api.toUnion2()
+    override fun targetClass(): KClass<*> = API::class // We want to find the API
 }
 
 /**
