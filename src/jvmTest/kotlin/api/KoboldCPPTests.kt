@@ -4,8 +4,9 @@ import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.StreamedGenerationResult
 import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
-import com.mylosoftworks.kotllms.api.toJson
-import com.mylosoftworks.kotllms.chat.BasicChatMessage
+import com.mylosoftworks.kotllms.api.impl.extenders.toChat
+import com.mylosoftworks.kotllms.features.toJson
+import com.mylosoftworks.kotllms.chat.ChatMessageWithImages
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
@@ -44,7 +45,7 @@ class KoboldCPPTests {
 
     @Test
     fun testFlags() {
-        val flags = KoboldCPPGenFlags().init {
+        val flags = KoboldCPPGenFlags().apply {
             prompt = "This is a prompt"
             temperature = 0.7f
         }
@@ -58,9 +59,9 @@ class KoboldCPPTests {
     @Test
     fun testGen() {
         val start = "This is a short story about a"
-        val flags = KoboldCPPGenFlags().init {
+        val flags = KoboldCPPGenFlags().apply {
             prompt = start
-            max_length = 50
+            maxLength = 50
 
             grammar = GBNF {
                 optional {
@@ -87,9 +88,9 @@ class KoboldCPPTests {
     fun testSuccessiveGen() {
         runBlocking {
             repeat(2) {
-                api.rawGen(KoboldCPPGenFlags().init {
+                api.rawGen(KoboldCPPGenFlags().apply {
                     prompt = "Test"
-                    max_length = 10
+                    maxLength = 10
                 })
             }
         }
@@ -98,9 +99,9 @@ class KoboldCPPTests {
     @Test
     fun testStream() {
         val start = "This is a short story about a"
-        val flags = KoboldCPPGenFlags().init {
+        val flags = KoboldCPPGenFlags().apply {
             prompt = start
-            max_length = 50
+            maxLength = 50
 
             stream = true
         }
@@ -118,28 +119,29 @@ class KoboldCPPTests {
 
     @Test
     fun testChat() {
-        val exampleChat = ChatDef<BasicChatMessage>()
-        exampleChat.addMessage(BasicChatMessage().init {
+        val exampleChat = ChatDef<ChatMessageWithImages>()
+        exampleChat.addMessage(ChatMessageWithImages().apply {
             content = "Hi!"
             role = "bot"
         })
-        exampleChat.addMessage(BasicChatMessage().init {
+        exampleChat.addMessage(ChatMessageWithImages().apply {
             content = "What's up?"
             role = "user"
         })
-        api.settings.template = ChatTemplateDSL {
-"""
+
+        val chatApi = api.toChat(ChatTemplateDSL {
+            """
 This is an example chat template
 
 This is the beginning of the chat:
 ${messages.joinToString("\n") {message -> message["role"]?.let { "$it: " } + message["content"]?.let { it } }}
 bot:
 """.trimIndent()
-        }
+        })
 
         val result = runBlocking {
-            api.chatGen(exampleChat, KoboldCPPGenFlags().init {
-                max_length = 200
+            chatApi.chatGen(exampleChat, KoboldCPPGenFlags().apply {
+                maxLength = 200
             })
         }
 
@@ -151,16 +153,16 @@ bot:
     fun testImage() {
         val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
 
-        val exampleChat = ChatDef<BasicChatMessage>()
-        exampleChat.addMessage(BasicChatMessage().init {
+        val exampleChat = ChatDef<ChatMessageWithImages>()
+        exampleChat.addMessage(ChatMessageWithImages().apply {
             content = "What do you see in this image?"
             role = "user"
             images = listOf(image.toAttached())
         })
-        api.settings.template = Llama3Template()
+        val chatApi = api.toChat(Llama3Template())
 
         val result = runBlocking {
-            api.chatGen(exampleChat)
+            chatApi.chatGen(exampleChat)
         }
 
         println(result.getText())

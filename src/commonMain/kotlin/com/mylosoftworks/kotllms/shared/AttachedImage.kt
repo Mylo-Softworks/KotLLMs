@@ -1,7 +1,7 @@
 package com.mylosoftworks.kotllms.shared
 
-import com.mylosoftworks.kotllms.api.ToJson
-import com.mylosoftworks.kotllms.api.toJson
+import com.mylosoftworks.kotllms.features.ToJson
+import com.mylosoftworks.kotllms.features.toJson
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 

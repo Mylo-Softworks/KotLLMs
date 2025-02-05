@@ -47,7 +47,7 @@ val api = KoboldCPP(KoboldCPPSettings(template = Llama3Template()))
 ```kotlin
 val start = "This is a short story about a"
 // KoboldCPP flags since it's the api we're using, createFlags() creates a flags object for whichever api you're using, some apis might have flags that others don't.
-val flags = api.createFlags().init {
+val flags = api.createFlags().apply {
     prompt = start
     max_length = 50
 }
@@ -61,7 +61,7 @@ print(result.getText())
 ```kotlin
 val start = "This is a short story about a"
 // KoboldCPP flags since it's the api we're using, createFlags() creates a flags object for whichever api you're using, some apis might have flags that others don't.
-val flags = api.createFlags().init {
+val flags = api.createFlags().apply {
     prompt = start
     max_length = 50
     
@@ -82,16 +82,17 @@ result.registerStreamer {
 ```
 
 ## Performing a chat generation call
-> Chat generations require apis which implement the ChatGen interface, some apis implement chats in raw gens with templates
+> Chat generations require apis which implement the ChatGen interface.  
+> Chat support can be added to any `RawGen` API using a template with `api.toChat(template)`.
 
 > Custom chat templates can be created by extending `ChatTemplate`, using `ChatTemplateDSL`.
 ```kotlin
 val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-exampleChat.addMessage(BasicTemplatedChatMessage().init {
+exampleChat.addMessage(BasicTemplatedChatMessage().apply {
     content = "You are a helpful AI assistant."
     role = "system"
 })
-exampleChat.addMessage(BasicTemplatedChatMessage().init {
+exampleChat.addMessage(BasicTemplatedChatMessage().apply {
     content = "Who are you?"
     role = "user"
 })

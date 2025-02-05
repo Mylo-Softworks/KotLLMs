@@ -1,10 +1,8 @@
 package com.mylosoftworks.kotllms.api.impl
 
-import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.api.*
-import com.mylosoftworks.kotllms.chat.BasicChatMessage
-import com.mylosoftworks.kotllms.chat.ChatDef
-import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
+import com.mylosoftworks.kotllms.features.*
+import com.mylosoftworks.kotllms.features.flagsimpl.*
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.jsonSettings
 import com.mylosoftworks.kotllms.shared.AttachedImage
@@ -21,7 +19,7 @@ import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags>,
-    RawGen<KoboldCPPGenFlags>, ChatGen<KoboldCPPGenFlags, ChatDef<BasicChatMessage>> {
+    RawGen<KoboldCPPGenFlags> {
 
     val client = createKtorClient()
 
@@ -93,7 +91,7 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     }
 
     override suspend fun rawGen(flags: KoboldCPPGenFlags?): GenerationResult {
-        if (flags != null && flags.stream) {
+        if (flags != null && flags.stream==true) {
             return KoboldCPPGenerationResultsStreamed(this).also {
                 CoroutineScope(coroutineContext).launch { // Needed so KoboldCPPGenerationResultsStreamed can be returned before the SSE is already complete
                     makeHttpSSEPost("/api/extra/generate/stream", flags) {
@@ -123,78 +121,69 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
         makeHttpPost("/api/extra/abort", KoboldCPPGenFlags())
     }
 
-    override suspend fun chatGen(
-        chatDef: ChatDef<BasicChatMessage>,
-        flags: KoboldCPPGenFlags?
-    ): GenerationResult {
-        if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
-        val validFlags = flags ?: KoboldCPPGenFlags()
-
-        validFlags.trim_stop = validFlags.trim_stop ?: true
-        validFlags.prompt = settings.template!!.formatChat(chatDef)
-        validFlags.stop_sequence = settings.template!!.stopStrings()
-        if (validFlags.images == null) validFlags.images = chatDef.lastMessageImages()
-
-        return rawGen(validFlags)
-    }
-
-    override suspend fun supportsChat() = settings.chatTemplateSetup()
+//    override suspend fun chatGen(
+//        chatDef: ChatDef<BasicChatMessage>,
+//        flags: KoboldCPPGenFlags?
+//    ): GenerationResult {
+//        if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
+//        val validFlags = flags ?: KoboldCPPGenFlags()
+//
+//        validFlags.trimStop = validFlags.trimStop ?: true
+//        validFlags.prompt = settings.template!!.formatChat(chatDef)
+//        validFlags.stopSequences = settings.template!!.stopStrings()
+//        if (validFlags.images == null) validFlags.images = chatDef.lastMessageImages()
+//
+//        return rawGen(validFlags)
+//    }
+//
+//    override suspend fun supportsChat() = settings.chatTemplateSetup()
 
 }
 
-class KoboldCPPSettings(url: String = "http://localhost:5001", var template: ChatTemplate? = null) : Settings() {
+class KoboldCPPSettings(url: String = "http://localhost:5001") : Settings() {
     var url: String = url
         set(value) { field = stripTrailingSlash(value) }
 
     fun applyToRequest(builder: HttpRequestBuilder) {
 
     }
-
-    fun chatTemplateSetup(): Boolean {
-        return template != null
-    }
 }
 
-class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>() {
-    var max_context_length by Flag<Int>()
-    var max_length by Flag<Int>()
-    var prompt by Flag<String>()
-    var quiet by Flag<Boolean>()
-    var rep_pen by Flag<Float>()
-    var rep_pen_range by Flag<Int>()
-    var rep_pen_slope by Flag<Float>()
-    var temperature by Flag<Float>()
-    var tfs by Flag<Float>()
-    var top_a by Flag<Float>()
-    var top_k by Flag<Int>()
-    var top_p by Flag<Float>()
-    var typical by Flag<Float>()
-    var stop_sequence by BiConvertedJsonFlag<List<String>>({ jsonSettings.encodeToJsonElement(it) },
+class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>(),
+    FlagsAllBasic, FlagsCommonSampling, FlagTopA, FlagTfs, FlagTypical, FlagRepetitionPenaltyWithRangeSlope,
+    FlagStopSequences, FlagTrimStop, FlagEarlyStopping, FlagAttachedImages, FlagGrammarGBNF, FlagQuiet, FlagStream
+{
+    override var contextSize by Flag<Int>("max_context_length")
+    override var maxLength by Flag<Int>("max_length")
+    override var prompt by Flag<String>()
+    override var quiet by Flag<Boolean>()
+    override var repetitionPenalty by Flag<Float>("rep_pen")
+    override var repetitionPenaltyRange by Flag<Int>("rep_pen_range")
+    override var repetitionPenaltySlope by Flag<Float>("rep_pen_slope")
+    override var temperature by Flag<Float>()
+    override var tfs by Flag<Float>()
+    override var topA by Flag<Float>("top_a")
+    override var topK by Flag<Int>("top_k")
+    override var topP by Flag<Float>("top_p")
+    override var typical by Flag<Float>()
+    override var stopSequences by BiConvertedJsonFlag<List<String>>("stop_sequence", { jsonSettings.encodeToJsonElement(it) },
         { it.jsonArray.map { it.jsonPrimitive.content }.toList() })
-    var trim_stop by Flag<Boolean>()
-    var bypass_eos by Flag<Boolean>() // Set to false to prevent early stopping
+    override var trimStop by Flag<Boolean>("trim_stop")
+    override var earlyStopping by Flag<Boolean>("bypass_eos") // Set to false to prevent early stopping
 
 //    var images by BiConvertedJsonFlag<List<AttachedImage>>({ Json.encodeToJsonElement(it.map { it.toBase64() }) },
 //        { it.jsonArray.map { AttachedImage(it.jsonPrimitive.content) }.toList() })
-    var images by Flag<List<AttachedImage>>() // AttachedImage is serializable
+    override var images by Flag<List<AttachedImage>>() // AttachedImage is serializable
 
-    var stream: Boolean = false // Not an actual flag, but changes behavior
+    override var stream: Boolean? = false // Not an actual flag, but changes behavior
 
-    var grammar by GBNFFlag()
-    fun rawGrammar(gbnf: String?) {
+    override var grammar by GBNFFlag()
+    override fun setGbnfGrammarRaw(gbnf: String?) {
         if (gbnf == null) {
             setFlags.remove("grammar")
             return
         }
         setFlags["grammar"] = gbnf.toJson()
-    }
-
-    override fun applyGrammar(grammar: GBNF) {
-        this.grammar = grammar
-    }
-
-    override fun enableEarlyStopping(enable: Boolean) {
-        this.bypass_eos = enable // False to disable early stopping, true to force continuing
     }
 }
 

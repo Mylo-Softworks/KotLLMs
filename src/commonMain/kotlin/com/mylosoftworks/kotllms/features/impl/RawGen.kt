@@ -2,7 +2,7 @@ package com.mylosoftworks.kotllms.features.impl
 
 import com.mylosoftworks.kotllms.api.GenerationResult
 import com.mylosoftworks.kotllms.features.Feature
-import com.mylosoftworks.kotllms.api.Flags
+import com.mylosoftworks.kotllms.features.Flags
 
 /**
  * Allows a raw generation to be made (text -> text)

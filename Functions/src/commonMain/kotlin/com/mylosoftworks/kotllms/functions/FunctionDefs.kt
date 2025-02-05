@@ -2,9 +2,14 @@ package com.mylosoftworks.kotllms.functions
 
 import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
-import com.mylosoftworks.kotllms.api.Flags
+import com.mylosoftworks.kotllms.api.API
+import com.mylosoftworks.kotllms.features.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
+import com.mylosoftworks.kotllms.chat.ChatMessage
+import com.mylosoftworks.kotllms.features.flagsimpl.FlagEarlyStopping
+import com.mylosoftworks.kotllms.features.flagsimpl.FlagGrammarGBNF
 import com.mylosoftworks.kotllms.features.impl.ChatGen
+import com.mylosoftworks.kotllms.runIfImpl
 
 /**
  * Base class for function definitions.
@@ -42,11 +47,27 @@ class FunctionDefs(
 
     /**
      * Create the function call in a single request, uses a different grammar, makes longer responses
+     *
+     * @param api The [ChatGen] API which is used to generate the response.
+     * @param flags The flags to give to the generation, or null for default.
+     *
+     * @param M The message type that the chat type requires.
+     * @param GM The given message type, which extends the message type that ChatGen requires [M].
      */
-    suspend fun <F: Flags<F>, D: ChatDef<*>, T : ChatGen<F, D>> requestFunctionCallSingleRequest(api: T, flags: F, chatDef: D): Result<Triple<String, List<(suspend () -> Any?)>, String>> {
-        flags.applyGrammar(getGrammarForAllCallsSingleRequest())
-        flags.enableEarlyStopping(false)
-        val response = api.chatGen(chatDef, flags).getText()
+    @Suppress("unchecked_cast")
+    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCallSingleRequest(api: T, flags: F?, chatDef: ChatDef<GM>): Result<Triple<String, List<(suspend () -> Any?)>, String>> {
+//        flags.applyGrammar(getGrammarForAllCallsSingleRequest())
+//        flags.enableEarlyStopping(false)
+        val validFlags = flags ?: ((api as API<*, *>).createFlags() as F)
+
+        validFlags.runIfImpl<FlagGrammarGBNF> {
+            grammar = getGrammarForAllCallsSingleRequest()
+        }
+        validFlags.runIfImpl<FlagEarlyStopping> {
+            earlyStopping = false
+        }
+
+        val response = api.chatGen(chatDef, validFlags).getText()
 
         return grammarDef.parseFunctionCall(this, response)
     }

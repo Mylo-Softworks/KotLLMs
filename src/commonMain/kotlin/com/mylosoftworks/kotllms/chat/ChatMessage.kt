@@ -6,46 +6,38 @@ import kotlin.reflect.KProperty
 /**
  * Similar to generation flags, each message can have it's own flags. The flags can be accessed for formatting and templating.
  */
-abstract class ChatMessage<T : ChatMessage<T>> {
+abstract class ChatMessage {
     val setFlags = hashMapOf<String, Any>()
+
+    abstract var role: String?
+    abstract var content: String?
 
     operator fun get(name: String) = setFlags[name]
 
-    abstract fun setTextContent(content: String) // Text content implementation, usually involves setting a flag
-
     open fun getAttachedImages(): List<AttachedImage> {
         return listOf()
-    }
-
-    inline fun init(init: T.() -> Unit): T {
-        init(this as T)
-        return this
     }
 }
 
 /**
  * A chat message meant to be used with ChatTemplate, to be turned into a prompt string.
  */
-open class BasicChatMessage : ChatMessage<BasicChatMessage>() { // Open class, since you can add extra message variables
-    var role by MessageFlag<String>()
-    var content by MessageFlag<String>()
+open class ChatMessageWithImages : ChatMessage() { // Open class, since you can add extra message variables
+    override var role by MessageFlag<String>()
+    override var content by MessageFlag<String>()
 
     var images = listOf<AttachedImage>()
 
     override fun getAttachedImages(): List<AttachedImage> = images
-
-    override fun setTextContent(content: String) {
-        this.content = content
-    }
 }
 
 class MessageFlag<T> {
-    operator fun <U : ChatMessage<U>> getValue(thisRef: U, property: KProperty<*>): T? {
+    operator fun <U : ChatMessage> getValue(thisRef: U, property: KProperty<*>): T? {
         @Suppress("UNCHECKED_CAST")
         return thisRef.setFlags.getOrElse(property.name) { null } as T?
     }
 
-    operator fun <U : ChatMessage<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
+    operator fun <U : ChatMessage> setValue(thisRef: U, property: KProperty<*>, value: T?) {
         if (value == null) {
             thisRef.setFlags.remove(property.name)
             return
@@ -55,12 +47,12 @@ class MessageFlag<T> {
 }
 
 class MessageOneWayConvertedFlag<T, V>(val convert: (T) -> V) {
-    operator fun <U : ChatMessage<U>> getValue(thisRef: U, property: KProperty<*>): Any? {
+    operator fun <U : ChatMessage> getValue(thisRef: U, property: KProperty<*>): Any? {
         @Suppress("UNCHECKED_CAST")
         return thisRef.setFlags.getOrElse(property.name) { null } as V?
     }
 
-    operator fun <U : ChatMessage<U>> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
+    operator fun <U : ChatMessage> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
         if (value == null) {
             thisRef.setFlags.remove(property.name)
             return
@@ -70,12 +62,12 @@ class MessageOneWayConvertedFlag<T, V>(val convert: (T) -> V) {
 }
 
 class MessageTwoWayConvertedFlag<T, V>(val convertTo: (T) -> V, val convertFrom: (V) -> T) {
-    operator fun <U : ChatMessage<U>> getValue(thisRef: U, property: KProperty<*>): Any? {
+    operator fun <U : ChatMessage> getValue(thisRef: U, property: KProperty<*>): Any? {
         @Suppress("UNCHECKED_CAST")
         return (thisRef.setFlags.getOrElse(property.name) { null } as V?)?.let { convertFrom(it) }
     }
 
-    operator fun <U : ChatMessage<U>> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
+    operator fun <U : ChatMessage> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
         if (value == null) {
             thisRef.setFlags.remove(property.name)
             return

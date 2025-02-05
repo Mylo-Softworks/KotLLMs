@@ -1,6 +1,7 @@
 import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
-import com.mylosoftworks.kotllms.chat.BasicChatMessage
+import com.mylosoftworks.kotllms.api.impl.extenders.toChat
+import com.mylosoftworks.kotllms.chat.ChatMessageWithImages
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
 import com.mylosoftworks.kotllms.functions.*
@@ -22,7 +23,7 @@ class KoboldCPPFunctionCallTests {
             }
         }
 
-        val systemMessage = BasicChatMessage().init {
+        val systemMessage = ChatMessageWithImages().apply {
             content = """
                 You are a helpful AI assistant based on Llama 3.
                 You are a function calling model based on Llama 3, all your actions are executed through functions, including responding to the user.
@@ -30,7 +31,7 @@ class KoboldCPPFunctionCallTests {
             role = "system"
         }
 
-        val functionList = BasicChatMessage().init {
+        val functionList = ChatMessageWithImages().apply {
             content = """
                 First, you write your thoughts down, allowing you to decide on which function to call, and what values to give as the parameters, then, you write down the name of the function to call, after that, provide values for the parameters, some parameters can be optional.
                 The following is a JSON object containing all functions available to you, with a name, and description for each one of them:
@@ -39,23 +40,23 @@ class KoboldCPPFunctionCallTests {
             role = "system"
         }
 
-        val exampleChat = ChatDef<BasicChatMessage>()
-        exampleChat.addMessage(BasicChatMessage().init {
+        val exampleChat = ChatDef<ChatMessageWithImages>()
+        exampleChat.addMessage(ChatMessageWithImages().apply {
             content = "Who are you?"
             role = "user"
         })
 
-        api.settings.template = Llama3Template()
+        val chatApi = api.toChat(Llama3Template())
 
         runBlocking {
-            val flags = KoboldCPPGenFlags().init {
-                max_length = 1024
+            val flags = KoboldCPPGenFlags().apply {
+                maxLength = 1024
             } // We will use the same flags for both calls
 
             val givenChat =
                 exampleChat.subChat(9, mutableListOf(systemMessage, functionList))
 
-            val (_, funcs, comment) = functions.requestFunctionCallSingleRequest(api, flags, givenChat).getOrThrow()
+            val (_, funcs, comment) = functions.requestFunctionCallSingleRequest(chatApi, flags, givenChat).getOrThrow()
             println("Comment: $comment")
             funcs[0]()
         }

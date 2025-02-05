@@ -1,5 +1,7 @@
 package com.mylosoftworks.kotllms.api
 
+import com.mylosoftworks.kotllms.features.Flags
+
 /**
  * API base implementation
  * @param S The settings type to use, settings are things like an API key, stored in the API user.

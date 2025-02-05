@@ -1,6 +1,6 @@
 package com.mylosoftworks.kotllms.chat
 
-class ChatDef<M : ChatMessage<M>> {
+class ChatDef<M : ChatMessage> {
     var messages = mutableListOf<M>()
 
     fun lastMessageImages() = messages.last().getAttachedImages()
