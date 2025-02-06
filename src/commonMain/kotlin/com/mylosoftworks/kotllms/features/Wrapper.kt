@@ -2,6 +2,7 @@ package com.mylosoftworks.kotllms.features
 
 import com.mylosoftworks.kotllms.Union
 import com.mylosoftworks.kotllms.nonNull
+import com.mylosoftworks.kotllms.toUnion2
 import kotlin.reflect.KClass
 
 /**
@@ -12,12 +13,21 @@ interface Wrapper<T: Any> {
      * Access the upper wrapped type, could be self.
      */
     fun getWrapped(): T {
-        var linked = getLinked()
+        return findWrapped()
+    }
+
+    /**
+     * Similar to getWrapped, but allows for specifying a custom target type.
+     */
+    @Suppress("unchecked_cast")
+    fun <Target: Any> findWrapped(targetClass: KClass<Target> = targetClass() as KClass<Target>): Target {
+        if (targetClass.isInstance(this)) return this as Target
+        var linked = this.toUnion2<T, Wrapper<T>>()
         while (true) {
             linked.nonNull().let {
-                if (targetClass().isInstance(it)) {
+                if (targetClass.isInstance(it)) {
                     @Suppress("unchecked_cast")
-                    return it as T
+                    return it as Target
                 }
                 else {
                     linked = getLinked() // Go higher and try again

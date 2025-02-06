@@ -36,8 +36,14 @@ abstract class Flags<T : Flags<T>> {
     val setFlags = hashMapOf<String, JsonElement>()
 
     fun applyToRequestJson(map: HashMap<String, JsonElement>) {
+        preApply()
         map.putAll(setFlags)
     }
+
+    /**
+     * Override this if the implemented API requires a parameter and there's a valid default which could be set.
+     */
+    open fun preApply() {}
 }
 
 open class Flag<T>(val altName: String? = null) {
