@@ -1,4 +1,3 @@
-import com.mylosoftworks.gbnfkotlin.rules.GBNFLiteralRule
 import com.mylosoftworks.kotllms.functions.*
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -55,7 +54,7 @@ class AutoParseTests {
 
     @Test
     fun autoParsePrintGrammar() {
-        println(exampleFunctions.getGrammarForAllCallsSingleRequest().compile())
+        println(exampleFunctions.getFunctionsGrammar().compile())
     }
 
     @Test
@@ -67,7 +66,7 @@ class AutoParseTests {
             value: "I am a helpful AI assistant based on Llama 3. I'm a function calling model, which means I'm a tool that allows you to execute actions by calling functions. I'm here to help you with any questions or tasks you may have, so feel free to ask me anything!"
         """.trimIndent() + "\n" // The newline is included in the grammar, but gets trimmed with trimIndent, so I've added it back manually
 
-        val (raw, call, thoughts) = exampleFunctions.grammarDef.parseFunctionCall(exampleFunctions, testInput).getOrThrow()
+        val (call, thoughts) = exampleFunctions.parseFunctionCall(testInput).getOrThrow()
         assert(thoughts == "I am a helpful AI assistant based on Llama 3. I'm a function calling model, which means I'm a tool, ") { "Thoughts don't match parsed" }
 
         // Invoke the print function

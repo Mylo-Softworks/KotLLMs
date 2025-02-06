@@ -3,6 +3,7 @@ package com.mylosoftworks.kotllms.functions
 import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.api.API
+import com.mylosoftworks.kotllms.api.GenerationResult
 import com.mylosoftworks.kotllms.features.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.ChatMessage
@@ -39,14 +40,50 @@ class FunctionDefs(
     }
 
     /**
-     * Returns a GBNF object containing the grammar needed to pick a function to call and parameters in one go.
+     * Returns a GBNF object containing the grammar defined in the associated grammarDef.
      */
-    fun getGrammarForAllCallsSingleRequest(): GBNF {
+    fun getFunctionsGrammar(): GBNF {
         return grammarDef.getFunctionsGrammar(this)
     }
 
     /**
-     * Create the function call in a single request, uses a different grammar, makes longer responses
+     * Request a generation from the LLM in the format specified by the grammarDef. And returns the result object,
+     * doing the generation in 2 steps allows streaming a response, and then getting the function calls from that response.
+     *
+     * If you only need to get the function calls from a request,
+     *
+     * @param api The [ChatGen] API which is used to generate the response.
+     * @param flags The flags to give to the generation, or null for default.
+     *
+     * @param M The message type that the chat type requires.
+     * @param GM The given message type, which extends the message type that ChatGen requires [M].
+     *
+     * @return The response given by the API.
+     *
+     * @sample requestFunctionCallsAndParse
+     */
+    @Suppress("unchecked_cast")
+    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCalls(api: T, flags: F?, chatDef: ChatDef<GM>): GenerationResult {
+        val validFlags = flags ?: ((api as API<*, *>).createFlags() as F)
+
+        validFlags.runIfImpl<FlagGrammarGBNF> {
+            grammar = getFunctionsGrammar()
+        }
+
+        return api.chatGen(chatDef, validFlags)
+    }
+
+    /**
+     * Parses a response and returns the function calls.
+     *
+     * @return A result with a pair containing a list of the found function calls, and a string with the reasoning (if grammar supports it).
+     *
+     * @sample requestFunctionCallsAndParse
+     */
+    fun parseFunctionCall(response: String) = grammarDef.parseFunctionCall(this, response)
+
+    /**
+     * Request function calls based on a chat input, and parse those function calls.
      *
      * @param api The [ChatGen] API which is used to generate the response.
      * @param flags The flags to give to the generation, or null for default.
@@ -54,22 +91,12 @@ class FunctionDefs(
      * @param M The message type that the chat type requires.
      * @param GM The given message type, which extends the message type that ChatGen requires [M].
      */
-    @Suppress("unchecked_cast")
-    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCallSingleRequest(api: T, flags: F?, chatDef: ChatDef<GM>): Result<Triple<String, List<(suspend () -> Any?)>, String>> {
-//        flags.applyGrammar(getGrammarForAllCallsSingleRequest())
-//        flags.enableEarlyStopping(false)
-        val validFlags = flags ?: ((api as API<*, *>).createFlags() as F)
+    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCallsAndParse(api: T, flags: F?, chatDef: ChatDef<GM>): Result<Pair<List<(suspend () -> Any?)>, String>> {
+        // Get a response from the llm following the grammar
+        val response = requestFunctionCalls(api, flags, chatDef).getText()
 
-        validFlags.runIfImpl<FlagGrammarGBNF> {
-            grammar = getGrammarForAllCallsSingleRequest()
-        }
-        validFlags.runIfImpl<FlagEarlyStopping> {
-            earlyStopping = false
-        }
-
-        val response = api.chatGen(chatDef, validFlags).getText()
-
-        return grammarDef.parseFunctionCall(this, response)
+        // Parse the function call(s) from the response
+        return parseFunctionCall(response)
     }
 }
 
@@ -101,14 +128,16 @@ abstract class FunctionParameter<T>(var name: String, var optional: Boolean = fa
     }
 }
 
-class FunctionParameterString(name: String, optional: Boolean = false, comment: String? = null, val maxLength: Int = 999999) : FunctionParameter<String>(name, optional, comment, "String") {
+class FunctionParameterString(name: String, optional: Boolean = false, comment: String? = null, val maxLength: Int = 999999, val multiline: Boolean = false) : FunctionParameter<String>(name, optional, comment, "String") {
     override fun addGBNFRule(gbnf: GBNFEntity) {
         gbnf.run {
             literal("\"")
             repeat(max = maxLength) {
                 oneOf {
+                    literal("\\\\")
                     literal("\\\"") // Should allow escaping without triggering end of string
-                    range("\"\n", true) // [^"\n]
+                    if (multiline) range("\"", true) // [^"]
+                    else range("\"\n", true) // [^"\n]
                 }
             }
             literal("\"")
