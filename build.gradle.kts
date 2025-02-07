@@ -63,13 +63,18 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation("io.ktor:ktor-client-cio:$ktor_version")
+//                implementation("io.ktor:ktor-client-cio:$ktor_version") // CIO sse is broken
+//                implementation("io.ktor:ktor-client-okhttp:$ktor_version") // OKHttp supports http 2, websockets, and works on android. Currently does not allow for successive streams
+//                implementation("io.ktor:ktor-client-apache:$ktor_version") // Apache supports http 2 (for apache 5), doesn't support websockets or android. Successfully handles successive streams
+
+                // Incompatible with websocket streaming, if an api requires it, add.
+                implementation("io.ktor:ktor-client-android:$ktor_version") // Android does not support http 2 or websockets, but supports android.
             }
         }
 
         jsMain {
             dependencies {
-                implementation("io.ktor:ktor-client-js:$ktor_version")
+                implementation("io.ktor:ktor-client-js:$ktor_version") // The JS client is recommended for javascript runtimes, and supports http 2 and websockets
             }
         }
     }

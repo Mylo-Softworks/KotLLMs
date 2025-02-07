@@ -91,7 +91,7 @@ class KoboldCPPTests {
                 api.rawGen(KoboldCPPGenFlags().apply {
                     prompt = "Test"
                     maxLength = 10
-                })
+                }).getOrThrow() // Use getOrThrow, otherwise errors would be missed
             }
         }
     }
@@ -106,14 +106,26 @@ class KoboldCPPTests {
             stream = true
         }
         runBlocking {
-            val result = api.rawGen(flags) as StreamedGenerationResult<*>
+            val complete = false
+            val result = api.rawGen(flags).getOrThrow() as StreamedGenerationResult<*>
 
             print(start) // Start
             result.registerStreamer {
-                print(it.getToken()) // Stream
+                val chunk = it.getOrElse {
+                    it.printStackTrace()
+                    return@registerStreamer
+                }
+                print(chunk.getTokenF()) // Stream
                 System.out.flush() // Show the new tokens even before newline (since print doesn't flush)
-                if (it.isLastToken()) println() // End
+                if (chunk.isLastToken()) println() // End
             }
+        }
+    }
+
+    @Test
+    fun testSuccessiveStream() {
+        repeat(2) {
+            testStream()
         }
     }
 

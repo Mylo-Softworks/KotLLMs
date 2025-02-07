@@ -8,6 +8,7 @@ import com.mylosoftworks.kotllms.jsonSettings
 import com.mylosoftworks.kotllms.shared.AttachedImage
 import com.mylosoftworks.kotllms.shared.createKtorClient
 import com.mylosoftworks.kotllms.stripTrailingSlash
+import com.mylosoftworks.kotllms.wrapTryCatchToResult
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -24,41 +25,50 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     val client = createKtorClient()
 
     private fun getApiUrl(path: String) = settings.url + path
-    private suspend fun makeHttpGet(path: String): HttpResponse {
-        return client.get(getApiUrl(path)) {
-            settings.applyToRequest(this)
+    private suspend fun makeHttpGet(path: String): Result<HttpResponse> {
+        return wrapTryCatchToResult {
+            client.get(getApiUrl(path)) {
+                settings.applyToRequest(this)
+            }
         }
     }
 
-    private suspend fun makeHttpPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): HttpResponse {
-        return client.post(getApiUrl(path)) {
-            settings.applyToRequest(this)
+    private suspend fun makeHttpPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): Result<HttpResponse> {
+        return wrapTryCatchToResult {
+            client.post(getApiUrl(path)) {
+                settings.applyToRequest(this)
 
-            contentType(ContentType.Application.Json)
-            extraSettings(this)
-            setBody(
-                hashMapOf<String, JsonElement>().apply(block).apply {flags.applyToRequestJson(this)}
-            )
+                contentType(ContentType.Application.Json)
+                extraSettings(this)
+                setBody(
+                    hashMapOf<String, JsonElement>().apply(block).apply {flags.applyToRequestJson(this)}
+                )
+            }
         }
     }
 
-    private suspend fun makeHttpSSEPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit) {
-        client.sse(getApiUrl(path), {
-            method = HttpMethod.Post
+    private suspend fun makeHttpSSEPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit): Result<Unit> {
+        return wrapTryCatchToResult {
+            client.sse(getApiUrl(path), {
+                method = HttpMethod.Post
 
-            settings.applyToRequest(this)
+                settings.applyToRequest(this)
 
-            contentType(ContentType.Application.Json)
+                contentType(ContentType.Application.Json)
+                accept(ContentType.Text.EventStream)
 
-            extraSettings(this)
-            setBody(
-                hashMapOf<String, JsonElement>().apply {flags.applyToRequestJson(this)}
-            )
-        }, block = block)
+                extraSettings(this)
+                setBody(
+                    hashMapOf<String, JsonElement>().apply {flags.applyToRequestJson(this)}
+                )
+
+
+            }, block = block)
+        }
     }
 
     override suspend fun check(): Boolean {
-        return makeHttpGet("/api/v1/model").status == HttpStatusCode.OK
+        return makeHttpGet("/api/v1/model").getOrElse { return false }.status == HttpStatusCode.OK
     }
 
     override fun createFlags(): KoboldCPPGenFlags {
@@ -66,11 +76,11 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     }
 
     override suspend fun version(): Result<KoboldCPPVersion> {
-        return makeHttpGet("/api/extra/version").bodyAsText().let { jsonSettings.decodeFromString(it) }
+        return Result.success(makeHttpGet("/api/extra/version").getOrElse { return Result.failure(it) }.bodyAsText().let { jsonSettings.decodeFromString(it) })
     }
 
     override suspend fun getCurrentModel(): Result<KoboldCPPModel> {
-        return Result.success(makeHttpGet("/api/v1/model").bodyAsText().let {
+        return Result.success(makeHttpGet("/api/v1/model").getOrElse { return Result.failure(it) }.bodyAsText().let {
             jsonSettings.parseToJsonElement(it).jsonObject["result"]?.jsonPrimitive?.content?.let { it2 ->
                 KoboldCPPModel(it2)
             } ?: return Result.failure(RuntimeException("Invalid response"))
@@ -78,14 +88,14 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     }
 
     override suspend fun contextLength(): Result<Int> {
-        return Result.success(makeHttpGet("/api/extra/true_max_context_length").bodyAsText()
+        return Result.success(makeHttpGet("/api/extra/true_max_context_length").getOrElse { return Result.failure(it) }.bodyAsText()
             .let { jsonSettings.decodeFromString<RawResponses.ContextLength>(it).value })
     }
 
     override suspend fun tokenCount(string: String, flags: KoboldCPPGenFlags?): Result<TokenCountDef> {
         return Result.success(makeHttpPost("/api/extra/tokencount", flags ?: KoboldCPPGenFlags()) {
             set("prompt", string.toJson())
-        }.bodyAsText().let {
+        }.getOrElse { return Result.failure(it) }.bodyAsText().let {
             TokenCountDef(jsonSettings.parseToJsonElement(it).jsonObject["value"]?.jsonPrimitive?.int ?: return Result.failure(RuntimeException("Invalid response")))
         })
     }
@@ -93,28 +103,30 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     override suspend fun rawGen(flags: KoboldCPPGenFlags?): Result<GenerationResult> {
         if (flags != null && flags.stream==true) {
             // Streamed
-            return Result.success(KoboldCPPGenerationResultsStreamed(this).also {
-                CoroutineScope(coroutineContext).launch { // Needed so KoboldCPPGenerationResultsStreamed can be returned before the SSE is already complete
-                    makeHttpSSEPost("/api/extra/generate/stream", flags) {
-                        var lastChunk: KoboldCPPStreamChunk? = null
-                        while ((lastChunk?.finish_reason ?: "null") == "null" && this.isActive) {
-                            incoming.collect { event ->
-                                if (event.event == "message") {
-                                    val data = event.data
-                                    if (data != null) {
-                                        val newChunk = jsonSettings.decodeFromString<KoboldCPPStreamChunk>(data)
-                                        it.update(newChunk)
-                                        lastChunk = newChunk
-                                    }
+
+            val result = KoboldCPPGenerationResultsStreamed(this)
+            CoroutineScope(coroutineContext).launch {
+                makeHttpSSEPost("/api/extra/generate/stream", flags) {
+                    var lastChunk: KoboldCPPStreamChunk? = null
+                    while ((lastChunk?.finish_reason ?: "null") == "null" && this.isActive) {
+                        incoming.collect { event ->
+                            if (event.event == "message") {
+                                val data = event.data
+                                if (data != null) {
+                                    val newChunk = jsonSettings.decodeFromString<KoboldCPPStreamChunk>(data)
+                                    result.update(newChunk)
+                                    lastChunk = newChunk
                                 }
                             }
                         }
                     }
-                }
-            })
+                }.getOrElse { result.criticalError(it) } // Crash the current result.
+            }
+
+            return Result.success(result) // Note: Streaming always returns success, errors are provided through the callback.
         }
         // Non-streamed
-        return Result.success(makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).bodyAsText().let {
+        return Result.success(makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).getOrElse { return Result.failure(it) }.bodyAsText().let {
             KoboldCPPGenerationResults(it, this)
         })
     }
@@ -122,24 +134,6 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     suspend fun sendAbort() {
         makeHttpPost("/api/extra/abort", KoboldCPPGenFlags())
     }
-
-//    override suspend fun chatGen(
-//        chatDef: ChatDef<BasicChatMessage>,
-//        flags: KoboldCPPGenFlags?
-//    ): GenerationResult {
-//        if (!supportsChat()) error("Doesn't support chat, did you forget to add a template to the settings?")
-//        val validFlags = flags ?: KoboldCPPGenFlags()
-//
-//        validFlags.trimStop = validFlags.trimStop ?: true
-//        validFlags.prompt = settings.template!!.formatChat(chatDef)
-//        validFlags.stopSequences = settings.template!!.stopStrings()
-//        if (validFlags.images == null) validFlags.images = chatDef.lastMessageImages()
-//
-//        return rawGen(validFlags)
-//    }
-//
-//    override suspend fun supportsChat() = settings.chatTemplateSetup()
-
 }
 
 class KoboldCPPSettings(url: String = "http://localhost:5001") : Settings() {
@@ -173,8 +167,6 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>(),
     override var trimStop by Flag<Boolean>("trim_stop")
     override var earlyStopping by Flag<Boolean>("bypass_eos") // Set to false to prevent early stopping
 
-//    var images by BiConvertedJsonFlag<List<AttachedImage>>({ Json.encodeToJsonElement(it.map { it.toBase64() }) },
-//        { it.jsonArray.map { AttachedImage(it.jsonPrimitive.content) }.toList() })
     override var images by Flag<List<AttachedImage>>() // AttachedImage is serializable
 
     override var stream: Boolean? = false // Not an actual flag, but changes behavior
@@ -204,7 +196,7 @@ object RawResponses {
 }
 
 class KoboldCPPGenerationResults(json: String, val api: KoboldCPP) : GenerationResult(false), Cancellable {
-    lateinit var content: String
+    var content: String
     init {
         jsonSettings.parseToJsonElement(json).jsonObject.let {root ->
             root["results"]!!.jsonArray.let {results ->
@@ -223,28 +215,30 @@ class KoboldCPPGenerationResults(json: String, val api: KoboldCPP) : GenerationR
 }
 
 @Serializable
-data class KoboldCPPStreamChunk(val tokenVal: String, val finish_reason: String): StreamChunk() {
-    override fun getToken(): String = tokenVal
+data class KoboldCPPStreamChunk(val token: String, val finish_reason: String): StreamChunk() {
+    override fun getTokenF(): String = token
     override fun isLastToken() = finish_reason != "null"
 }
 
 class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGenerationResult<KoboldCPPStreamChunk>(), Cancellable {
-    val streamers = arrayListOf<(KoboldCPPStreamChunk) -> Unit>()
+    val streamers = arrayListOf<(Result<KoboldCPPStreamChunk>) -> Unit>()
     var currentContent = ""
     var finish_reason = "null"
+    var error: Throwable? = null
     val currentContentAsChunk
         get() = KoboldCPPStreamChunk(currentContent, finish_reason)
 
     override fun update(chunk: KoboldCPPStreamChunk) {
+        if (error != null) return
         streamers.forEach {
-            it(chunk)
+            it(Result.success(chunk))
         }
-        currentContent += chunk.tokenVal
+        currentContent += chunk.token
         finish_reason = chunk.finish_reason
     }
 
-    override fun registerStreamer(block: (KoboldCPPStreamChunk) -> Unit) {
-        block(currentContentAsChunk)
+    override fun registerStreamer(block: (Result<KoboldCPPStreamChunk>) -> Unit) {
+        block(error?.let { Result.failure(error!!) } ?: Result.success(currentContentAsChunk))
         streamers.add(block)
     }
 
@@ -258,5 +252,11 @@ class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGeneratio
 
     override suspend fun cancel() {
         api.sendAbort()
+    }
+
+    override fun criticalError(error: Throwable) {
+        finish_reason = "error"
+        this.error = error
+        streamers.forEach { it(Result.failure(error)) }
     }
 }

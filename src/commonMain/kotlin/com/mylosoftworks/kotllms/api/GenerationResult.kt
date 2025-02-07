@@ -14,12 +14,14 @@ interface Cancellable {
 }
 
 abstract class StreamChunk {
-    abstract fun getToken(): String
+    abstract fun getTokenF(): String
     abstract fun isLastToken(): Boolean
 }
 
 abstract class StreamedGenerationResult<C: StreamChunk> : GenerationResult(true) {
-    abstract fun registerStreamer(block: (C) -> Unit)
+    abstract fun registerStreamer(block: (Result<C>) -> Unit)
     abstract fun isComplete(): Boolean
     abstract fun update(chunk: C)
+
+    abstract fun criticalError(error: Throwable)
 }
