@@ -3,7 +3,7 @@ package com.mylosoftworks.kotllms.features.impl
 import kotlinx.serialization.Serializable
 
 interface Version<V : VersionInfo> {
-    suspend fun version(): V
+    suspend fun version(): Result<V>
 }
 
 @Serializable

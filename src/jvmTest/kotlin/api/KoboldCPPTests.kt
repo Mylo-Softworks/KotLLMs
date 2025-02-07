@@ -22,7 +22,7 @@ class KoboldCPPTests {
     @Test
     fun checkCurrentModel() {
         val modelName = runBlocking {
-            api.getCurrentModel().modelName
+            api.getCurrentModel().getOrThrow().modelName
         }
         print("Current model: $modelName\n")
     }
@@ -31,7 +31,7 @@ class KoboldCPPTests {
     fun checkVersion() {
         val versionInfo = runBlocking {
             api.version()
-        }
+        }.getOrThrow()
         println("Current version: ${versionInfo.versionNumber}")
     }
 
@@ -80,7 +80,7 @@ class KoboldCPPTests {
         }
         val result = runBlocking {
             api.rawGen(flags)
-        }
+        }.getOrThrow()
         println(start + result.getText())
     }
 
@@ -143,7 +143,7 @@ bot:
             chatApi.chatGen(exampleChat, KoboldCPPGenFlags().apply {
                 maxLength = 200
             })
-        }
+        }.getOrThrow()
 
         println(result.getText())
     }
@@ -163,7 +163,7 @@ bot:
 
         val result = runBlocking {
             chatApi.chatGen(exampleChat)
-        }
+        }.getOrThrow()
 
         println(result.getText())
     }

@@ -10,5 +10,5 @@ import com.mylosoftworks.kotllms.features.Flags
  * Apis which do not support real chats can still work in a chat context by using a prompt template
  */
 interface ChatGen<F: Flags<*>, M : ChatMessage> {
-    suspend fun <M2: M> chatGen(chatDef: ChatDef<M2>, flags: F? = null): GenerationResult
+    suspend fun <M2: M> chatGen(chatDef: ChatDef<M2>, flags: F? = null): Result<GenerationResult>
 }

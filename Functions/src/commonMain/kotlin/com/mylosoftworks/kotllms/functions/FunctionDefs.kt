@@ -63,7 +63,7 @@ class FunctionDefs(
      * @sample requestFunctionCallsAndParse
      */
     @Suppress("unchecked_cast")
-    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCalls(api: T, flags: F?, chatDef: ChatDef<GM>): GenerationResult {
+    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCalls(api: T, flags: F?, chatDef: ChatDef<GM>): Result<GenerationResult> {
         val validFlags = flags ?: ((api as API<*, *>).createFlags() as F)
 
         validFlags.runIfImpl<FlagGrammarGBNF> {
@@ -93,7 +93,7 @@ class FunctionDefs(
      */
     suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCallsAndParse(api: T, flags: F?, chatDef: ChatDef<GM>): Result<Pair<List<(suspend () -> Any?)>, String>> {
         // Get a response from the llm following the grammar
-        val response = requestFunctionCalls(api, flags, chatDef).getText()
+        val response = requestFunctionCalls(api, flags, chatDef).getOrElse { return Result.failure(it) }.getText()
 
         // Parse the function call(s) from the response
         return parseFunctionCall(response)

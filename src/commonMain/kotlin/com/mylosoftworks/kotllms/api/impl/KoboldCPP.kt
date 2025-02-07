@@ -18,7 +18,7 @@ import kotlinx.serialization.json.*
 import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
-    Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags>,
+    Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags, TokenCountDef>,
     RawGen<KoboldCPPGenFlags> {
 
     val client = createKtorClient()
@@ -65,34 +65,35 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
         return KoboldCPPGenFlags()
     }
 
-    override suspend fun version(): KoboldCPPVersion {
+    override suspend fun version(): Result<KoboldCPPVersion> {
         return makeHttpGet("/api/extra/version").bodyAsText().let { jsonSettings.decodeFromString(it) }
     }
 
-    override suspend fun getCurrentModel(): KoboldCPPModel {
-        return makeHttpGet("/api/v1/model").bodyAsText().let {
+    override suspend fun getCurrentModel(): Result<KoboldCPPModel> {
+        return Result.success(makeHttpGet("/api/v1/model").bodyAsText().let {
             jsonSettings.parseToJsonElement(it).jsonObject["result"]?.jsonPrimitive?.content?.let { it2 ->
                 KoboldCPPModel(it2)
-            } ?: error("Invalid response")
-        }
+            } ?: return Result.failure(RuntimeException("Invalid response"))
+        })
     }
 
-    override suspend fun contextLength(): Int {
-        return makeHttpGet("/api/extra/true_max_context_length").bodyAsText()
-            .let { jsonSettings.decodeFromString<RawResponses.ContextLength>(it).value }
+    override suspend fun contextLength(): Result<Int> {
+        return Result.success(makeHttpGet("/api/extra/true_max_context_length").bodyAsText()
+            .let { jsonSettings.decodeFromString<RawResponses.ContextLength>(it).value })
     }
 
-    override suspend fun tokenCount(string: String, flags: KoboldCPPGenFlags?): Int {
-        return makeHttpPost("/api/extra/tokencount", flags ?: KoboldCPPGenFlags()) {
+    override suspend fun tokenCount(string: String, flags: KoboldCPPGenFlags?): Result<TokenCountDef> {
+        return Result.success(makeHttpPost("/api/extra/tokencount", flags ?: KoboldCPPGenFlags()) {
             set("prompt", string.toJson())
         }.bodyAsText().let {
-            jsonSettings.parseToJsonElement(it).jsonObject["value"]?.jsonPrimitive?.int ?: error("Invalid response")
-        }
+            TokenCountDef(jsonSettings.parseToJsonElement(it).jsonObject["value"]?.jsonPrimitive?.int ?: return Result.failure(RuntimeException("Invalid response")))
+        })
     }
 
-    override suspend fun rawGen(flags: KoboldCPPGenFlags?): GenerationResult {
+    override suspend fun rawGen(flags: KoboldCPPGenFlags?): Result<GenerationResult> {
         if (flags != null && flags.stream==true) {
-            return KoboldCPPGenerationResultsStreamed(this).also {
+            // Streamed
+            return Result.success(KoboldCPPGenerationResultsStreamed(this).also {
                 CoroutineScope(coroutineContext).launch { // Needed so KoboldCPPGenerationResultsStreamed can be returned before the SSE is already complete
                     makeHttpSSEPost("/api/extra/generate/stream", flags) {
                         var lastChunk: KoboldCPPStreamChunk? = null
@@ -110,11 +111,12 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
                         }
                     }
                 }
-            }
+            })
         }
-        return makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).bodyAsText().let {
+        // Non-streamed
+        return Result.success(makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).bodyAsText().let {
             KoboldCPPGenerationResults(it, this)
-        }
+        })
     }
 
     suspend fun sendAbort() {

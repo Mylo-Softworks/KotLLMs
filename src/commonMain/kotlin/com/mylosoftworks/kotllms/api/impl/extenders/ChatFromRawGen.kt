@@ -18,7 +18,7 @@ import kotlin.reflect.KClass
 @Suppress("unchecked_cast")
 class ChatFromRawGen<F: Flags<*>, S: Settings, A: API<S, F>> internal constructor(val api: Wrapper<A>, var template: ChatTemplate):
     RawGen<F> by api.getWrapped() as RawGen<F>, ChatGen<F, ChatMessage>, Wrapper<A> {
-    override suspend fun <M2 : ChatMessage> chatGen(chatDef: ChatDef<M2>, flags: F?): GenerationResult {
+    override suspend fun <M2 : ChatMessage> chatGen(chatDef: ChatDef<M2>, flags: F?): Result<GenerationResult> {
         val validFlags = flags ?: api.getWrapped().createFlags()
 
         validFlags.runIfImpl<FlagTrimStop> {

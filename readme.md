@@ -52,7 +52,7 @@ val flags = api.createFlags().apply {
     max_length = 50
 }
 // Assuming we're already in a suspend context
-val result = api.rawGen(flags)
+val result = api.rawGen(flags).getOrThrow()
 
 print(result.getText())
 ```
@@ -69,9 +69,9 @@ val flags = api.createFlags().apply {
 }
 // Assuming we're already in a suspend context
 // Either
-val result = api.rawGen(flags) as KoboldCPPGenerationResultsStreamed
+val result = api.rawGen(flags).getOrThrow() as KoboldCPPGenerationResultsStreamed
 // Or the more generic
-val result = api.rawGen(flags) as StreamedGenerationResult<*>
+val result = api.rawGen(flags).getOrThrow() as StreamedGenerationResult<*>
 
 // Now we can listen on the stream
 result.registerStreamer {
@@ -99,5 +99,5 @@ exampleChat.addMessage(BasicTemplatedChatMessage().apply {
 val flags = api.createFlags().init {
     max_length = 50
 }
-val result = api.chatGen(exampleChat, flags)
+val result = api.chatGen(exampleChat, flags).getOrThrow()
 ```
