@@ -6,7 +6,6 @@ import com.mylosoftworks.kotllms.features.Flags
 import com.mylosoftworks.kotllms.features.Wrapper
 import com.mylosoftworks.kotllms.shared.createKtorClient
 import com.mylosoftworks.kotllms.toUnion2
-import com.mylosoftworks.kotllms.wrapTryCatchToResult
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -19,7 +18,7 @@ import kotlin.reflect.KClass
  * @param S The settings type to use, settings are things like an API key, stored in the API user.
  * @param F The flags type to use, flags are things like generation parameters such as temperature, sent with the generation request.
  */
-abstract class API<S: Settings, F: Flags<*>>(var settings: S): Wrapper<API<S, F>> {
+abstract class API<S: Settings, F: Flags>(var settings: S): Wrapper<API<S, F>> {
     /**
      * Check if the API is available
      * @return Whether the API is functional
@@ -37,23 +36,23 @@ abstract class API<S: Settings, F: Flags<*>>(var settings: S): Wrapper<API<S, F>
 /**
  * Configure the settings for this API.
  */
-inline fun <Self: API<S, F>, S: Settings, F: Flags<*>> Self.configure(block: S.() -> Unit): Self = apply { block(settings) }
+inline fun <Self: API<S, F>, S: Settings, F: Flags> Self.configure(block: S.() -> Unit): Self = apply { block(settings) }
 
-abstract class HTTPAPI<S: Settings, F: Flags<*>>(settings: S): API<S, F>(settings) {
+abstract class HTTPAPI<S: Settings, F: Flags>(settings: S): API<S, F>(settings) {
     val client = createKtorClient()
 
-    protected abstract fun getApiUrl(path: String): String
+    abstract fun getApiUrl(path: String): String
 
-    protected suspend fun makeHttpGet(path: String): Result<HttpResponse> {
-        return wrapTryCatchToResult {
+    suspend fun makeHttpGet(path: String): Result<HttpResponse> {
+        return runCatching {
             client.get(getApiUrl(path)) {
                 settings.applyToRequest(this)
             }
         }
     }
 
-    protected suspend fun makeHttpPost(path: String, flags: F, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): Result<HttpResponse> {
-        return wrapTryCatchToResult {
+    suspend fun makeHttpPost(path: String, flags: F, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): Result<HttpResponse> {
+        return runCatching {
             client.post(getApiUrl(path)) {
                 settings.applyToRequest(this)
 
@@ -66,8 +65,8 @@ abstract class HTTPAPI<S: Settings, F: Flags<*>>(settings: S): API<S, F>(setting
         }
     }
 
-    protected suspend fun makeHttpSSEPost(path: String, flags: F, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit): Result<Unit> {
-        return wrapTryCatchToResult {
+    suspend fun makeHttpSSEPost(path: String, flags: F, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit): Result<Unit> {
+        return runCatching {
             client.sse(getApiUrl(path), {
                 method = HttpMethod.Post
 

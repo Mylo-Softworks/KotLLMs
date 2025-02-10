@@ -39,7 +39,7 @@ interface FlagsCommonSampling: FlagTemperature, FlagTopK, FlagTopP
 
 // Penalties
 /**
- * A penalty which helps the LLM avoid repetition.
+ * A penalty which helps the LLM avoid repetition. (Also called frequency penalty in some apis)
  */
 interface FlagRepetitionPenalty {
     var repetitionPenalty: Float?
@@ -51,6 +51,10 @@ interface FlagRepetitionPenalty {
 interface FlagRepetitionPenaltyWithRangeSlope: FlagRepetitionPenalty {
     var repetitionPenaltyRange: Int?
     var repetitionPenaltySlope: Float?
+}
+
+interface FlagPresencePenalty {
+    var presencePenalty: Float?
 }
 
 // Other sampling flags, like early stopping and output trimming

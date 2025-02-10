@@ -4,6 +4,7 @@ import com.mylosoftworks.kotllms.chat.ChatMessageTemplated
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.features.impl.ChatGen
 import kotlin.test.Test
 
 class TemplateTests {
@@ -12,11 +13,11 @@ class TemplateTests {
         val exampleChat = ChatDef{ChatMessageTemplated()}.apply {
             createMessage {
                 content = "Hi!"
-                role = "bot"
+                role = ChatGen.ChatRole.Assistant
             }
             createMessage {
                 content = "What's up?"
-                role = "user"
+                role = ChatGen.ChatRole.User
             }
         }
         val template = ChatTemplateDSL {
@@ -25,7 +26,7 @@ This is an example chat template
 
 This is the beginning of the chat:
 ${messages.joinToString("\n") {message -> message["role"]?.let { "$it: " } + message["content"]?.let { it } }}
-bot:
+assistant:
 """.trimIndent()
         }
 
@@ -33,10 +34,10 @@ bot:
             This is an example chat template
 
             This is the beginning of the chat:
-            bot: Hi!
+            assistant: Hi!
             user: What's up?
-            bot:
-        """.trimIndent()) {"Template didn't match test case"}
+            assistant:
+        """.trimIndent()) { "Template didn't match test case" }
     }
 
     @Test
@@ -44,11 +45,11 @@ bot:
         val exampleChat = ChatDef{ChatMessageTemplated()}.apply {
             createMessage {
                 content = "Hi!"
-                role = "assistant"
+                role = ChatGen.ChatRole.Assistant
             }
             createMessage {
                 content = "What's up?"
-                role = "user"
+                role = ChatGen.ChatRole.User
             }
         }
 

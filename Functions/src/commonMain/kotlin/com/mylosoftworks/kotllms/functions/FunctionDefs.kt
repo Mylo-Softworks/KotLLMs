@@ -7,7 +7,6 @@ import com.mylosoftworks.kotllms.api.GenerationResult
 import com.mylosoftworks.kotllms.features.Flags
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.ChatMessage
-import com.mylosoftworks.kotllms.features.flagsimpl.FlagEarlyStopping
 import com.mylosoftworks.kotllms.features.flagsimpl.FlagGrammarGBNF
 import com.mylosoftworks.kotllms.features.impl.ChatGen
 import com.mylosoftworks.kotllms.runIfImpl
@@ -63,7 +62,7 @@ class FunctionDefs(
      * @sample requestFunctionCallsAndParse
      */
     @Suppress("unchecked_cast")
-    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCalls(api: T, flags: F?, chatDef: ChatDef<GM>): Result<GenerationResult> {
+    suspend fun <F: Flags, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCalls(api: T, flags: F?, chatDef: ChatDef<GM>): Result<GenerationResult> {
         val validFlags = flags ?: ((api as API<*, *>).createFlags() as F)
 
         validFlags.runIfImpl<FlagGrammarGBNF> {
@@ -91,7 +90,7 @@ class FunctionDefs(
      * @param M The message type that the chat type requires.
      * @param GM The given message type, which extends the message type that ChatGen requires [M].
      */
-    suspend fun <F: Flags<F>, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCallsAndParse(api: T, flags: F?, chatDef: ChatDef<GM>): Result<Pair<List<(suspend () -> Any?)>, String>> {
+    suspend fun <F: Flags, M: ChatMessage, GM: M, T: ChatGen<F, M>> requestFunctionCallsAndParse(api: T, flags: F?, chatDef: ChatDef<GM>): Result<Pair<List<(suspend () -> Any?)>, String>> {
         // Get a response from the llm following the grammar
         val response = requestFunctionCalls(api, flags, chatDef).getOrElse { return Result.failure(it) }.getText()
 

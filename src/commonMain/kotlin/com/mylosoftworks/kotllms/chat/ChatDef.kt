@@ -1,10 +1,13 @@
 package com.mylosoftworks.kotllms.chat
 
 import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
+import com.mylosoftworks.kotllms.features.ToJson
+import com.mylosoftworks.kotllms.features.toJson
 import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.AttachedImage
+import kotlinx.serialization.json.JsonElement
 
-class ChatDef<M : ChatMessage> (val createEmpty: () -> M) {
+class ChatDef<M : ChatMessage> (val createEmpty: () -> M): ToJson {
     var messages = mutableListOf<M>()
 
     fun lastMessageImages() = messages.last().runIfImpl<ChatFeatureImages, List<AttachedImage>> { images }
@@ -43,5 +46,9 @@ class ChatDef<M : ChatMessage> (val createEmpty: () -> M) {
         val clone = this.createNew()
         clone.messages = messages.toMutableList() // Copies the list
         return clone
+    }
+
+    override fun toJson(): JsonElement {
+        return messages.toJson()
     }
 }

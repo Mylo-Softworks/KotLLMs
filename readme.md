@@ -20,6 +20,7 @@ Everything is bound to change
 
 # Current implemented APIs
 * [KoboldCPP](https://github.com/LostRuins/koboldcpp)
+* [OpenAI](https://platform.openai.com/docs/api-reference/) + Proxies
 
 ... More coming soon!
 
@@ -45,7 +46,8 @@ val api = KoboldCPP()
 val api = KoboldCPP(KoboldCPPSettings("http://localhost:5002"))
 
 // Init KoboldCPP with a Llama 3 chat template
-val api = KoboldCPP(KoboldCPPSettings(template = Llama3Template()))
+val api = KoboldCPP(KoboldCPPSettings()).toChat(Llama3Template())
+// The original KoboldCPP object is available through api.getWrapped().
 ```
 
 ## Performing a raw generation call
@@ -53,11 +55,10 @@ val api = KoboldCPP(KoboldCPPSettings(template = Llama3Template()))
 val start = "This is a short story about a"
 // KoboldCPP flags since it's the api we're using, createFlags() creates a flags object for whichever api you're using, some apis might have flags that others don't.
 val flags = api.createFlags().apply {
-    prompt = start
     max_length = 50
 }
 // Assuming we're already in a suspend context
-val result = api.rawGen(flags).getOrThrow()
+val result = api.rawGen(start, flags).getOrThrow()
 
 print(result.getText())
 ```
@@ -67,22 +68,22 @@ print(result.getText())
 val start = "This is a short story about a"
 // KoboldCPP flags since it's the api we're using, createFlags() creates a flags object for whichever api you're using, some apis might have flags that others don't.
 val flags = api.createFlags().apply {
-    prompt = start
     max_length = 50
     
     stream = true
 }
 // Assuming we're already in a suspend context
 // Either
-val result = api.rawGen(flags).getOrThrow() as KoboldCPPGenerationResultsStreamed
+val result = api.rawGen(start, flags).getOrThrow() as KoboldCPPGenerationResultsStreamed
 // Or the more generic
-val result = api.rawGen(flags).getOrThrow() as StreamedGenerationResult<*>
+val result = api.rawGen(start, flags).getOrThrow() as StreamedGenerationResult<*>
 
 // Now we can listen on the stream
 result.registerStreamer {
-    print(it.getToken()) // Stream
+    val chunk = it.getOrThrow() // Using Result
+    print(chunk.getToken()) // Stream
     System.out.flush() // Show the new tokens even before newline (since print doesn't flush)
-    if (it.isLastToken()) println() // End
+    if (chunk.isLastToken()) println() // End
 }
 ```
 
@@ -96,11 +97,11 @@ result.registerStreamer {
 val exampleChat = api.createChat {
     createMessage {
         content = "You are a helpful AI assistant."
-        role = "system"
+        role = ChatGen.ChatRole.System
     }
     createMessage {
         content = "Who are you?"
-        role = "user"
+        role = ChatGen.ChatRole.User
     }
 }
 val flags = api.createFlags().init {

@@ -2,6 +2,7 @@ package com.mylosoftworks.kotllms.chat.templated.presets
 
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
+import com.mylosoftworks.kotllms.features.impl.ChatGen
 
 /**
  * A template preset for mistral models, system prompts are inserted as a user message in [[INST]] content [[/INST]]
@@ -9,7 +10,7 @@ import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
  * @param startToken Whether or not to include <s> at the start of the prompt
  * @param userRoles All role names which should use [[INST]]
  */
-class MistralTemplate(val startToken: Boolean = true, val prependStartToken: Boolean = true, val userRoles: List<String> = listOf("user", "system")): ChatTemplate() {
+class MistralTemplate(val startToken: Boolean = true, val prependStartToken: Boolean = true, val userRoles: List<ChatGen.ChatRole> = listOf(ChatGen.ChatRole.User, ChatGen.ChatRole.System)): ChatTemplate() {
     override fun formatChat(def: ChatDef<*>): String {
         return def.messages.joinToString(" ", if (startToken) "<s> " else "") {
             if (it["role"] in userRoles) {

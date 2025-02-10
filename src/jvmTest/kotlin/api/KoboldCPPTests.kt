@@ -9,6 +9,7 @@ import com.mylosoftworks.kotllms.features.toJson
 import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.features.impl.ChatGen
 import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.toAttached
 import kotlinx.coroutines.runBlocking
@@ -46,11 +47,9 @@ class KoboldCPPTests {
     @Test
     fun testFlags() {
         val flags = api.buildFlags {
-            prompt = "This is a prompt"
             temperature = 0.7f
         }
         val test = hashMapOf(
-            "prompt" to "This is a prompt".toJson(),
             "temperature" to 0.7f.toJson()
         )
         assert(flags.setFlags == test) {"Flags didn't match"}
@@ -60,7 +59,6 @@ class KoboldCPPTests {
     fun testGen() {
         val start = "This is a short story about a"
         val flags = api.buildFlags {
-            prompt = start
             maxLength = 50
 
             grammar = GBNF {
@@ -79,7 +77,7 @@ class KoboldCPPTests {
             }
         }
         val result = runBlocking {
-            api.rawGen(flags)
+            api.rawGen(start, flags)
         }.getOrThrow()
         println(start + result.getText())
     }
@@ -88,8 +86,7 @@ class KoboldCPPTests {
     fun testSuccessiveGen() {
         runBlocking {
             repeat(2) {
-                api.rawGen(api.buildFlags {
-                    prompt = "Test"
+                api.rawGen("Test", api.buildFlags {
                     maxLength = 10
                 }).getOrThrow() // Use getOrThrow, otherwise errors would be missed
             }
@@ -100,13 +97,12 @@ class KoboldCPPTests {
     fun testStream() {
         val start = "This is a short story about a"
         val flags = api.buildFlags {
-            prompt = start
             maxLength = 50
 
             stream = true
         }
         runBlocking {
-            val result = api.rawGen(flags).getOrThrow() as StreamedGenerationResult<*>
+            val result = api.rawGen(start, flags).getOrThrow() as StreamedGenerationResult<*>
 
             print(start) // Start
             result.registerStreamer {
@@ -142,11 +138,11 @@ bot:
         val exampleChat = chatApi.createChat {
             createMessage {
                 content = "Hi!"
-                role = "bot"
+                role = ChatGen.ChatRole.Assistant
             }
             createMessage {
                 content = "What's up?"
-                role = "user"
+                role = ChatGen.ChatRole.User
             }
         }
 
@@ -169,7 +165,7 @@ bot:
         val exampleChat = chatApi.createChat {
             createMessage {
                 content = "What do you see in this image?"
-                role = "user"
+                role = ChatGen.ChatRole.User
                 runIfImpl<ChatFeatureImages> {
                     images = listOf(image.toAttached())
                 }

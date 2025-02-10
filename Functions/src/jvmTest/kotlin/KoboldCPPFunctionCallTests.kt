@@ -2,6 +2,7 @@ import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
 import com.mylosoftworks.kotllms.api.impl.extenders.toChat
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.features.impl.ChatGen
 import com.mylosoftworks.kotllms.functions.*
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -26,7 +27,7 @@ class KoboldCPPFunctionCallTests {
         val exampleChat = chatApi.createChat {
             createMessage {
                 content = "Who are you?"
-                role = "user"
+                role = ChatGen.ChatRole.User
             }
         }
 
@@ -36,7 +37,7 @@ class KoboldCPPFunctionCallTests {
                 You are a helpful AI assistant based on Llama 3.
                 You are a function calling model based on Llama 3, all your actions are executed through functions, including responding to the user.
             """.trimIndent()
-            role = "system"
+            role = ChatGen.ChatRole.System
         }
 
         val functionList = exampleChat.storeMessage {
@@ -45,7 +46,7 @@ class KoboldCPPFunctionCallTests {
                 The following is a JSON object containing all functions available to you, with a name, and description for each one of them:
                 ${functions.getDescriptionForAllCalls()}
                 """.trimIndent()
-            role = "system"
+            role = ChatGen.ChatRole.System
         }
 
 

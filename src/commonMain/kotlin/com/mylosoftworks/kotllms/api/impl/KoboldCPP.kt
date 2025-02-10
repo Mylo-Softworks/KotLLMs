@@ -19,17 +19,17 @@ import kotlin.coroutines.coroutineContext
 
 class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags, TokenCountDef>,
-    RawGen<KoboldCPPGenFlags> {
+    RawGen<KoboldCPPGenFlags>, FlagGenRequest<KoboldCPPGenFlags> {
 
     override fun getApiUrl(path: String) = settings.url + path
 
     override suspend fun check(): Boolean {
-        return makeHttpGet("/api/v1/model").getOrElse { return false }.status == HttpStatusCode.OK
+        return runCatching {
+            makeHttpGet("/api/v1/model").getOrElse { return false }.status == HttpStatusCode.OK
+        }.isSuccess
     }
 
-    override fun createFlags(): KoboldCPPGenFlags {
-        return KoboldCPPGenFlags()
-    }
+    override fun createFlags(): KoboldCPPGenFlags = KoboldCPPGenFlags()
 
     override suspend fun version(): Result<KoboldCPPVersion> {
         return Result.success(makeHttpGet("/api/extra/version").getOrElse { return Result.failure(it) }.bodyAsText().let { jsonSettings.decodeFromString(it) })
@@ -43,7 +43,7 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<Kob
         })
     }
 
-    override suspend fun contextLength(): Result<Int> {
+    override suspend fun contextLength(model: String?): Result<Int> {
         return Result.success(makeHttpGet("/api/extra/true_max_context_length").getOrElse { return Result.failure(it) }.bodyAsText()
             .let { jsonSettings.decodeFromString<RawResponses.ContextLength>(it).value })
     }
@@ -56,13 +56,13 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<Kob
         })
     }
 
-    override suspend fun rawGen(flags: KoboldCPPGenFlags?): Result<GenerationResult> {
-        if (flags != null && flags.stream==true) {
+    override suspend fun internalGen(url: String, flags: KoboldCPPGenFlags): Result<GenerationResult> {
+        if (flags.stream==true) {
             // Streamed
 
             val result = KoboldCPPGenerationResultsStreamed(this)
             CoroutineScope(coroutineContext).launch {
-                makeHttpSSEPost("/api/extra/generate/stream", flags) {
+                makeHttpSSEPost(url, flags) {
                     var lastChunk: KoboldCPPStreamChunk? = null
                     while ((lastChunk?.finish_reason ?: "null") == "null" && this.isActive) {
                         incoming.collect { event ->
@@ -82,11 +82,15 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<Kob
             return Result.success(result) // Note: Streaming always returns success, errors are provided through the callback.
         }
         // Non-streamed
-        return Result.success(makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).getOrElse { return Result.failure(it) }.also {
-                if (it.status != HttpStatusCode.OK) return Result.failure(RuntimeException(it.toString()))
-            }.bodyAsText().let {
+        return Result.success(makeHttpPost(url, flags).getOrElse { return Result.failure(it) }.bodyAsText().let {
             KoboldCPPGenerationResults(it, this)
         })
+    }
+
+    override suspend fun rawGen(prompt: String, flags: KoboldCPPGenFlags?): Result<GenerationResult> {
+        val appliedFlags = (flags ?: createFlags()).apply { setFlags["prompt"] = prompt.toJson() }
+        val stream = appliedFlags.stream == true
+        return internalGen(if (stream) "/api/extra/generate/stream" else "/api/v1/generate", appliedFlags)
     }
 
     suspend fun sendAbort() {
@@ -95,7 +99,7 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<Kob
 }
 
 class KoboldCPPSettings(url: String = "http://localhost:5001", override var apiKey: String? = null) : Settings(), SettingFeatureUrl, SettingFeatureAuth {
-    override var url: String = url
+    override var url: String = stripTrailingSlash(url)
         set(value) { field = stripTrailingSlash(value) }
 
     override fun applyToRequest(builder: HttpRequestBuilder) {
@@ -103,13 +107,13 @@ class KoboldCPPSettings(url: String = "http://localhost:5001", override var apiK
     }
 }
 
-class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>(),
+class KoboldCPPGenFlags : Flags(),
     FlagsAllBasic, FlagsCommonSampling, FlagTopA, FlagTfs, FlagTypical, FlagRepetitionPenaltyWithRangeSlope,
     FlagStopSequences, FlagTrimStop, FlagEarlyStopping, FlagAttachedImages, FlagGrammarGBNF, FlagQuiet, FlagStream
 {
     override var contextSize by flag<Int>("max_context_length").jsonBacked()
     override var maxLength by flag<Int>("max_length").jsonBacked()
-    override var prompt by flag<String>().jsonBacked()
+//    override var prompt by flag<String>().jsonBacked()
     override var quiet by flag<Boolean>().jsonBacked()
     override var repetitionPenalty by flag<Float>("rep_pen").jsonBacked()
     override var repetitionPenaltyRange by flag<Int>("rep_pen_range").jsonBacked()
@@ -120,8 +124,7 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>(),
     override var topK by flag<Int>("top_k").jsonBacked()
     override var topP by flag<Float>("top_p").jsonBacked()
     override var typical by flag<Float>().jsonBacked()
-    override var stopSequences by flag<List<String>>("stop_sequence").jsonBacked({ jsonSettings.encodeToJsonElement(this) },
-        { this.jsonArray.map { it.jsonPrimitive.content }.toList() })
+    override var stopSequences by stringListFlag("stop_sequence")
     override var trimStop by flag<Boolean>("trim_stop").jsonBacked()
     override var earlyStopping by flag<Boolean>("bypass_eos").jsonBacked() // Set to false to prevent early stopping
 
@@ -146,7 +149,7 @@ data class KoboldCPPVersion(val result: String, val version: String, val protect
         get() = version
 }
 
-class KoboldCPPModel(modelName: String) : ListedModelDef(modelName)
+class KoboldCPPModel(override val modelName: String) : ListedModelDef
 
 object RawResponses {
     @Serializable
@@ -199,16 +202,12 @@ class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGeneratio
         return finish_reason != "null"
     }
 
-    override fun getText(): String {
-        return currentContent
+    override fun criticalError(error: Throwable) {
+        finish_reason = "error"
+        streamers.forEach { it(Result.failure(error)) }
     }
 
     override suspend fun cancel() {
         api.sendAbort()
-    }
-
-    override fun criticalError(error: Throwable) {
-        finish_reason = "error"
-        streamers.forEach { it(Result.failure(error)) }
     }
 }

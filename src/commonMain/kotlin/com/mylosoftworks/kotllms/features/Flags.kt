@@ -20,9 +20,9 @@ fun Any?.toJson(): JsonElement = when (this) {
     is Boolean -> jsonSettings.encodeToJsonElement(this)
     is List<*> -> jsonSettings.encodeToJsonElement(this.map { it.toJson() })
     is Array<*> -> jsonSettings.encodeToJsonElement(this.map { it.toJson() })
-    is HashMap<*, *> -> jsonSettings.encodeToJsonElement(this.mapKeys { it.toString() }.mapValues { it.toJson() })
+    is HashMap<*, *> -> jsonSettings.encodeToJsonElement(this.mapKeys { it.key.toString() }.mapValues { it.value.toJson() })
     null -> JsonNull
-    else -> throw NotImplementedError(this.toString())
+    else -> throw NotImplementedError("Serialization for $this is not implemented.")
 }
 
 fun JsonElement.getPrimitiveValue(): Any? {
@@ -37,7 +37,7 @@ interface Flaggable<T: Any> {
 /**
  * Base class for flags, which contain extra information for a generation, such as the sampling temperature.
  */
-abstract class Flags<T : Flags<T>>: Flaggable<JsonElement> {
+abstract class Flags: Flaggable<JsonElement> {
     override val setFlags = hashMapOf<String, JsonElement>()
 
     fun applyToRequestJson(map: HashMap<String, JsonElement>) {
@@ -55,6 +55,11 @@ abstract class Flags<T : Flags<T>>: Flaggable<JsonElement> {
  * Create a basic flag `var flagName by flag<String>()`
  */
 fun <T: Any> flag(altName: String? = null) = Flag<T, Any>(altName)
+
+/**
+ * Create a flag which maps its values to V and back
+ */
+fun <T: Any, V: Any> mappedFlag(altName: String? = null, mapTo: T.() -> V = { error("Not implemented") }, mapFrom: V.() -> T = { error("Not implemented") }) = MappedFlag(altName, mapTo, mapFrom)
 
 /**
  * Change the backing field of a class to use Json. Allows supplying custom json convert functions.
@@ -76,6 +81,9 @@ fun gbnfFlag(altName: String? = null) = flag<GBNF>(altName)
         { GBNFInterpreter.interpretGBNF(this.getPrimitiveValue() as? String ?: "").getOrNull()}
     )
 
+fun stringListFlag(altName: String? = null) = flag<List<String>>(altName).jsonBacked({ jsonSettings.encodeToJsonElement(this) },
+    { this.jsonArray.map { it.jsonPrimitive.content }.toList() })
+
 /**
  * @param T The type we can interact with
  * @param V The backing type
@@ -95,6 +103,20 @@ open class Flag<T: Any, V: Any>(val altName: String? = null) {
             return
         }
         thisRef.setFlags[effectiveName(property)] = value as V
+    }
+}
+
+open class MappedFlag<T: Any, V: Any>(altName: String? = null, val mapTo: T.() -> V, val mapFrom: V.() -> T): Flag<T, V>(altName) {
+    override fun <U : Flaggable<V>> getValue(thisRef: U, property: KProperty<*>): T? {
+        return thisRef.setFlags.getOrElse(effectiveName(property)) { null }?.mapFrom()
+    }
+
+    override fun <U : Flaggable<V>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
+        if (value == null) {
+            thisRef.setFlags.remove(effectiveName(property))
+            return
+        }
+        thisRef.setFlags[effectiveName(property)] = value.mapTo()
     }
 }
 

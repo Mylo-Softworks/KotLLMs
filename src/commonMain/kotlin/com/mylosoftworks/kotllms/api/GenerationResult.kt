@@ -3,7 +3,6 @@ package com.mylosoftworks.kotllms.api
 /**
  * The base type for generation results. Allows for things like streaming.
  * @param streaming Whether the result is being streamed or not.
- * @param canCancel Whether the result can be cancelled or not.
  */
 abstract class GenerationResult(val streaming: Boolean) {
     abstract fun getText(): String
@@ -40,5 +39,9 @@ abstract class StreamedGenerationResult<C: StreamChunk> : GenerationResult(true)
     open fun criticalError(error: Throwable) {
         this.error = error
         streamers.forEach { it.invoke(Result.failure(error)) }
+    }
+
+    override fun getText(): String {
+        return currentContent
     }
 }
