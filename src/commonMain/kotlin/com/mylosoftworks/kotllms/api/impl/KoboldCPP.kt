@@ -149,29 +149,29 @@ class KoboldCPPGenFlags : Flags<KoboldCPPGenFlags>(),
     FlagsAllBasic, FlagsCommonSampling, FlagTopA, FlagTfs, FlagTypical, FlagRepetitionPenaltyWithRangeSlope,
     FlagStopSequences, FlagTrimStop, FlagEarlyStopping, FlagAttachedImages, FlagGrammarGBNF, FlagQuiet, FlagStream
 {
-    override var contextSize by Flag<Int>("max_context_length")
-    override var maxLength by Flag<Int>("max_length")
-    override var prompt by Flag<String>()
-    override var quiet by Flag<Boolean>()
-    override var repetitionPenalty by Flag<Float>("rep_pen")
-    override var repetitionPenaltyRange by Flag<Int>("rep_pen_range")
-    override var repetitionPenaltySlope by Flag<Float>("rep_pen_slope")
-    override var temperature by Flag<Float>()
-    override var tfs by Flag<Float>()
-    override var topA by Flag<Float>("top_a")
-    override var topK by Flag<Int>("top_k")
-    override var topP by Flag<Float>("top_p")
-    override var typical by Flag<Float>()
-    override var stopSequences by BiConvertedJsonFlag<List<String>>("stop_sequence", { jsonSettings.encodeToJsonElement(it) },
-        { it.jsonArray.map { it.jsonPrimitive.content }.toList() })
-    override var trimStop by Flag<Boolean>("trim_stop")
-    override var earlyStopping by Flag<Boolean>("bypass_eos") // Set to false to prevent early stopping
+    override var contextSize by flag<Int>("max_context_length").jsonBacked()
+    override var maxLength by flag<Int>("max_length").jsonBacked()
+    override var prompt by flag<String>().jsonBacked()
+    override var quiet by flag<Boolean>().jsonBacked()
+    override var repetitionPenalty by flag<Float>("rep_pen").jsonBacked()
+    override var repetitionPenaltyRange by flag<Int>("rep_pen_range").jsonBacked()
+    override var repetitionPenaltySlope by flag<Float>("rep_pen_slope").jsonBacked()
+    override var temperature by flag<Float>().jsonBacked()
+    override var tfs by flag<Float>().jsonBacked()
+    override var topA by flag<Float>("top_a").jsonBacked()
+    override var topK by flag<Int>("top_k").jsonBacked()
+    override var topP by flag<Float>("top_p").jsonBacked()
+    override var typical by flag<Float>().jsonBacked()
+    override var stopSequences by flag<List<String>>("stop_sequence").jsonBacked({ jsonSettings.encodeToJsonElement(this) },
+        { this.jsonArray.map { it.jsonPrimitive.content }.toList() })
+    override var trimStop by flag<Boolean>("trim_stop").jsonBacked()
+    override var earlyStopping by flag<Boolean>("bypass_eos").jsonBacked() // Set to false to prevent early stopping
 
-    override var images by Flag<List<AttachedImage>>() // AttachedImage is serializable
+    override var images by flag<List<AttachedImage>>().jsonBacked() // AttachedImage is serializable
 
     override var stream: Boolean? = false // Not an actual flag, but changes behavior
 
-    override var grammar by GBNFFlag()
+    override var grammar by gbnfFlag()
     override fun setGbnfGrammarRaw(gbnf: String?) {
         if (gbnf == null) {
             setFlags.remove("grammar")
@@ -221,19 +221,14 @@ data class KoboldCPPStreamChunk(val token: String, val finish_reason: String): S
 }
 
 class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGenerationResult<KoboldCPPStreamChunk>(), Cancellable {
-    val streamers = arrayListOf<(Result<KoboldCPPStreamChunk>) -> Unit>()
-    var currentContent = ""
     var finish_reason = "null"
-    var error: Throwable? = null
-    val currentContentAsChunk
+    override val currentContentAsChunk
         get() = KoboldCPPStreamChunk(currentContent, finish_reason)
 
     override fun update(chunk: KoboldCPPStreamChunk) {
         if (error != null) return
-        streamers.forEach {
-            it(Result.success(chunk))
-        }
-        currentContent += chunk.token
+        super.update(chunk)
+
         finish_reason = chunk.finish_reason
     }
 
@@ -256,7 +251,6 @@ class KoboldCPPGenerationResultsStreamed(val api: KoboldCPP) : StreamedGeneratio
 
     override fun criticalError(error: Throwable) {
         finish_reason = "error"
-        this.error = error
         streamers.forEach { it(Result.failure(error)) }
     }
 }

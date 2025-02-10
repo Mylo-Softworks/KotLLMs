@@ -6,10 +6,10 @@ import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
 import com.mylosoftworks.kotllms.api.impl.extenders.toChat
 import com.mylosoftworks.kotllms.features.toJson
-import com.mylosoftworks.kotllms.chat.ChatMessageWithImages
-import com.mylosoftworks.kotllms.chat.ChatDef
+import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.toAttached
 import kotlinx.coroutines.runBlocking
 import javax.imageio.ImageIO
@@ -131,16 +131,6 @@ class KoboldCPPTests {
 
     @Test
     fun testChat() {
-        val exampleChat = ChatDef<ChatMessageWithImages>()
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "Hi!"
-            role = "bot"
-        })
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "What's up?"
-            role = "user"
-        })
-
         val chatApi = api.toChat(ChatTemplateDSL {
             """
 This is an example chat template
@@ -150,6 +140,17 @@ ${messages.joinToString("\n") {message -> message["role"]?.let { "$it: " } + mes
 bot:
 """.trimIndent()
         })
+
+        val exampleChat = chatApi.createChat {
+            createMessage {
+                content = "Hi!"
+                role = "bot"
+            }
+            createMessage {
+                content = "What's up?"
+                role = "user"
+            }
+        }
 
         val result = runBlocking {
             chatApi.chatGen(exampleChat, KoboldCPPGenFlags().apply {
@@ -165,13 +166,17 @@ bot:
     fun testImage() {
         val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
 
-        val exampleChat = ChatDef<ChatMessageWithImages>()
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "What do you see in this image?"
-            role = "user"
-            images = listOf(image.toAttached())
-        })
         val chatApi = api.toChat(Llama3Template())
+
+        val exampleChat = chatApi.createChat {
+            createMessage {
+                content = "What do you see in this image?"
+                role = "user"
+                runIfImpl<ChatFeatureImages> {
+                    images = listOf(image.toAttached())
+                }
+            }
+        }
 
         val result = runBlocking {
             chatApi.chatGen(exampleChat)

@@ -8,9 +8,18 @@ val jsonSettings by lazy { Json {
     ignoreUnknownKeys = true
 } }
 
-inline fun <reified T> Any.runIfImpl(block: (T).() -> Unit) {
-    if (this is T) block(this)
+/**
+ * Run the block if `this` implements [T], and return the return value, or `null` if it doesn't implement [T]
+ */
+inline fun <reified T, R> Any.runIfImpl(block: T.() -> R): R? {
+    if (this is T) return block(this)
+    return null
 }
+
+/**
+ * Run the block if `this` implements [T], no return value
+ */
+inline fun <reified T> Any.runIfImpl(block: T.() -> Unit) = runIfImpl<T, Unit>(block)
 
 inline fun <reified T> Any.tryCast() = this as? T
 

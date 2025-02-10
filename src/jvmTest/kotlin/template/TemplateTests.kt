@@ -1,6 +1,6 @@
 package template
 
-import com.mylosoftworks.kotllms.chat.ChatMessageWithImages
+import com.mylosoftworks.kotllms.chat.ChatMessageTemplated
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
@@ -9,15 +9,16 @@ import kotlin.test.Test
 class TemplateTests {
     @Test
     fun testTemplate() {
-        val exampleChat = ChatDef<ChatMessageWithImages>()
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "Hi!"
-            role = "bot"
-        })
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "What's up?"
-            role = "user"
-        })
+        val exampleChat = ChatDef{ChatMessageTemplated()}.apply {
+            createMessage {
+                content = "Hi!"
+                role = "bot"
+            }
+            createMessage {
+                content = "What's up?"
+                role = "user"
+            }
+        }
         val template = ChatTemplateDSL {
             """
 This is an example chat template
@@ -40,15 +41,16 @@ bot:
 
     @Test
     fun testTemplatePreset() {
-        val exampleChat = ChatDef<ChatMessageWithImages>()
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "Hi!"
-            role = "assistant"
-        })
-        exampleChat.addMessage(ChatMessageWithImages().apply {
-            content = "What's up?"
-            role = "user"
-        })
+        val exampleChat = ChatDef{ChatMessageTemplated()}.apply {
+            createMessage {
+                content = "Hi!"
+                role = "assistant"
+            }
+            createMessage {
+                content = "What's up?"
+                role = "user"
+            }
+        }
 
         val template = Llama3Template()
 

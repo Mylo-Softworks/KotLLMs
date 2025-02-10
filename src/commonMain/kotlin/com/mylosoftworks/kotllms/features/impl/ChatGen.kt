@@ -11,4 +11,6 @@ import com.mylosoftworks.kotllms.features.Flags
  */
 interface ChatGen<F: Flags<*>, M : ChatMessage> {
     suspend fun <M2: M> chatGen(chatDef: ChatDef<M2>, flags: F? = null): Result<GenerationResult>
+
+    fun createChat(block: ChatDef<M>.() -> Unit): ChatDef<M>
 }

@@ -19,9 +19,26 @@ abstract class StreamChunk {
 }
 
 abstract class StreamedGenerationResult<C: StreamChunk> : GenerationResult(true) {
-    abstract fun registerStreamer(block: (Result<C>) -> Unit)
-    abstract fun isComplete(): Boolean
-    abstract fun update(chunk: C)
+    var currentContent = ""
+    abstract val currentContentAsChunk: C
 
-    abstract fun criticalError(error: Throwable)
+    val streamers = arrayListOf<(Result<C>) -> Unit>()
+
+    var error: Throwable? = null
+
+    open fun registerStreamer(block: (Result<C>) -> Unit) {
+        block(error?.let { Result.failure(error!!) } ?: Result.success(currentContentAsChunk))
+        streamers.add(block)
+    }
+    abstract fun isComplete(): Boolean
+    open fun update(chunk: C) {
+        if (error != null) return
+        currentContent += chunk.getTokenF()
+        streamers.forEach { it.invoke(Result.success(chunk)) }
+    }
+
+    open fun criticalError(error: Throwable) {
+        this.error = error
+        streamers.forEach { it.invoke(Result.failure(error)) }
+    }
 }

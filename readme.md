@@ -87,15 +87,17 @@ result.registerStreamer {
 
 > Custom chat templates can be created by extending `ChatTemplate`, using `ChatTemplateDSL`.
 ```kotlin
-val exampleChat = ChatDef<BasicTemplatedChatMessage>()
-exampleChat.addMessage(BasicTemplatedChatMessage().apply {
-    content = "You are a helpful AI assistant."
-    role = "system"
-})
-exampleChat.addMessage(BasicTemplatedChatMessage().apply {
-    content = "Who are you?"
-    role = "user"
-})
+// Universal syntax for creating chat messages from any chat API
+val exampleChat = api.createChat {
+    createMessage {
+        content = "You are a helpful AI assistant."
+        role = "system"
+    }
+    createMessage {
+        content = "Who are you?"
+        role = "user"
+    }
+}
 val flags = api.createFlags().init {
     max_length = 50
 }

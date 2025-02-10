@@ -6,6 +6,7 @@ import com.mylosoftworks.kotllms.api.GenerationResult
 import com.mylosoftworks.kotllms.api.Settings
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.ChatMessage
+import com.mylosoftworks.kotllms.chat.ChatMessageTemplated
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplate
 import com.mylosoftworks.kotllms.features.Flags
 import com.mylosoftworks.kotllms.features.Wrapper
@@ -16,7 +17,7 @@ import com.mylosoftworks.kotllms.toUnion2
 import kotlin.reflect.KClass
 
 @Suppress("unchecked_cast")
-class ChatFromRawGen<F: Flags<*>, S: Settings, A: API<S, F>> internal constructor(val api: Wrapper<A>, var template: ChatTemplate):
+class ChatFromRawGen<F: Flags<*>, S: Settings, A: API<S, F>> internal constructor(val api: Wrapper<A>, var template: ChatTemplate, var createChatMessage: () -> ChatMessage = { ChatMessageTemplated() }):
     RawGen<F> by api.getWrapped() as RawGen<F>, ChatGen<F, ChatMessage>, Wrapper<A> {
     override suspend fun <M2 : ChatMessage> chatGen(chatDef: ChatDef<M2>, flags: F?): Result<GenerationResult> {
         val validFlags = flags ?: api.getWrapped().createFlags()
@@ -39,6 +40,10 @@ class ChatFromRawGen<F: Flags<*>, S: Settings, A: API<S, F>> internal constructo
 
     override fun getLinked(): Union<A, Wrapper<A>> = api.toUnion2()
     override fun targetClass(): KClass<*> = API::class // We want to find the API
+
+    override fun createChat(block: ChatDef<ChatMessage>.() -> Unit): ChatDef<ChatMessage> {
+        return ChatDef(createChatMessage).apply(block)
+    }
 }
 
 /**
@@ -47,10 +52,10 @@ class ChatFromRawGen<F: Flags<*>, S: Settings, A: API<S, F>> internal constructo
  * 1. Wrapping an api which doesn't support chats
  * 2. Manually implementing chat on an API which does support chats, but through rawGen
  *
- * Once wrapped, the original api is available through `ChatFromRawGen.api`.
+ * Once wrapped, the original api is available through `ChatFromRawGen.api`. Or using the wrapper helper function: `chatApi.getLinked()`
  */
 @Suppress("unchecked_cast")
-fun <F: Flags<F>> RawGen<F>.toChat(template: ChatTemplate) = ChatFromRawGen(this as API<*, F>, template)
+fun <F: Flags<F>> RawGen<F>.toChat(template: ChatTemplate, createChatMessage: () -> ChatMessage = { ChatMessageTemplated() }) = ChatFromRawGen(this as API<*, F>, template, createChatMessage)
 
 /**
  * Extension function for generating a chat response with a model without knowing whether it's a chat API or a rawGen API beforehand.
