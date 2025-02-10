@@ -13,25 +13,26 @@ interface Wrapper<T: Any> {
      * Access the upper wrapped type, could be self.
      */
     fun getWrapped(): T {
-        return findWrapped()
+        return findWrapped()!!
     }
 
     /**
      * Similar to getWrapped, but allows for specifying a custom target type.
      */
     @Suppress("unchecked_cast")
-    fun <Target: Any> findWrapped(targetClass: KClass<Target> = targetClass() as KClass<Target>): Target {
+    fun <Target: Any> findWrapped(targetClass: KClass<Target> = targetClass() as KClass<Target>): Target? {
         if (targetClass.isInstance(this)) return this as Target
-        var linked = this.toUnion2<T, Wrapper<T>>()
+        var linked = this.toUnion2<T, Wrapper<T>>() // As if this was obtained from getLinked(), allows for self to be returned.
         while (true) {
             linked.nonNull().let {
                 if (targetClass.isInstance(it)) {
                     @Suppress("unchecked_cast")
                     return it as Target
                 }
-                else {
-                    linked = getLinked() // Go higher and try again
+                else if(it is Wrapper<*>) {
+                    linked = (it as Wrapper<T>).getLinked() // Go higher and try again
                 }
+                else return null
             }
         }
     }
