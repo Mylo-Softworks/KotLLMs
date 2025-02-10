@@ -22,7 +22,7 @@ fun Any?.toJson(): JsonElement = when (this) {
     is Array<*> -> jsonSettings.encodeToJsonElement(this.map { it.toJson() })
     is HashMap<*, *> -> jsonSettings.encodeToJsonElement(this.mapKeys { it.toString() }.mapValues { it.toJson() })
     null -> JsonNull
-    else -> TODO(this.toString())
+    else -> throw NotImplementedError(this.toString())
 }
 
 fun JsonElement.getPrimitiveValue(): Any? {

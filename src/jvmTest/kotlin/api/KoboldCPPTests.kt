@@ -106,7 +106,6 @@ class KoboldCPPTests {
             stream = true
         }
         runBlocking {
-            val complete = false
             val result = api.rawGen(flags).getOrThrow() as StreamedGenerationResult<*>
 
             print(start) // Start

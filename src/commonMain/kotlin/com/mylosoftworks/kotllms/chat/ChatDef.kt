@@ -44,6 +44,4 @@ class ChatDef<M : ChatMessage> (val createEmpty: () -> M) {
         clone.messages = messages.toMutableList() // Copies the list
         return clone
     }
-
-    // TODO: Filter functions based on token counts, store token counts in chat messages
 }

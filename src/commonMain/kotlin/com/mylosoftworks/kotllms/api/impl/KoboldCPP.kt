@@ -1,15 +1,14 @@
 package com.mylosoftworks.kotllms.api.impl
 
 import com.mylosoftworks.kotllms.api.*
+import com.mylosoftworks.kotllms.api.settingfeatures.SettingFeatureAuth
+import com.mylosoftworks.kotllms.api.settingfeatures.SettingFeatureUrl
 import com.mylosoftworks.kotllms.features.*
 import com.mylosoftworks.kotllms.features.flagsimpl.*
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.jsonSettings
 import com.mylosoftworks.kotllms.shared.AttachedImage
-import com.mylosoftworks.kotllms.shared.createKtorClient
 import com.mylosoftworks.kotllms.stripTrailingSlash
-import com.mylosoftworks.kotllms.wrapTryCatchToResult
-import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -18,54 +17,11 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import kotlin.coroutines.coroutineContext
 
-class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
+class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<KoboldCPPSettings, KoboldCPPGenFlags>(settings),
     Version<KoboldCPPVersion>, GetCurrentModel<KoboldCPPModel>, ContextLength, TokenCount<KoboldCPPGenFlags, TokenCountDef>,
     RawGen<KoboldCPPGenFlags> {
 
-    val client = createKtorClient()
-
-    private fun getApiUrl(path: String) = settings.url + path
-    private suspend fun makeHttpGet(path: String): Result<HttpResponse> {
-        return wrapTryCatchToResult {
-            client.get(getApiUrl(path)) {
-                settings.applyToRequest(this)
-            }
-        }
-    }
-
-    private suspend fun makeHttpPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): Result<HttpResponse> {
-        return wrapTryCatchToResult {
-            client.post(getApiUrl(path)) {
-                settings.applyToRequest(this)
-
-                contentType(ContentType.Application.Json)
-                extraSettings(this)
-                setBody(
-                    hashMapOf<String, JsonElement>().apply(block).apply {flags.applyToRequestJson(this)}
-                )
-            }
-        }
-    }
-
-    private suspend fun makeHttpSSEPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit): Result<Unit> {
-        return wrapTryCatchToResult {
-            client.sse(getApiUrl(path), {
-                method = HttpMethod.Post
-
-                settings.applyToRequest(this)
-
-                contentType(ContentType.Application.Json)
-                accept(ContentType.Text.EventStream)
-
-                extraSettings(this)
-                setBody(
-                    hashMapOf<String, JsonElement>().apply {flags.applyToRequestJson(this)}
-                )
-
-
-            }, block = block)
-        }
-    }
+    override fun getApiUrl(path: String) = settings.url + path
 
     override suspend fun check(): Boolean {
         return makeHttpGet("/api/v1/model").getOrElse { return false }.status == HttpStatusCode.OK
@@ -126,7 +82,9 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
             return Result.success(result) // Note: Streaming always returns success, errors are provided through the callback.
         }
         // Non-streamed
-        return Result.success(makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).getOrElse { return Result.failure(it) }.bodyAsText().let {
+        return Result.success(makeHttpPost("/api/v1/generate", flags ?: KoboldCPPGenFlags()).getOrElse { return Result.failure(it) }.also {
+                if (it.status != HttpStatusCode.OK) return Result.failure(RuntimeException(it.toString()))
+            }.bodyAsText().let {
             KoboldCPPGenerationResults(it, this)
         })
     }
@@ -136,12 +94,12 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : API<KoboldC
     }
 }
 
-class KoboldCPPSettings(url: String = "http://localhost:5001") : Settings() {
-    var url: String = url
+class KoboldCPPSettings(url: String = "http://localhost:5001", override var apiKey: String? = null) : Settings(), SettingFeatureUrl, SettingFeatureAuth {
+    override var url: String = url
         set(value) { field = stripTrailingSlash(value) }
 
-    fun applyToRequest(builder: HttpRequestBuilder) {
-
+    override fun applyToRequest(builder: HttpRequestBuilder) {
+        apiKey?.let { builder.bearerAuth(it) }
     }
 }
 
