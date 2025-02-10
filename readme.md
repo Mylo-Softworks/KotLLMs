@@ -54,7 +54,7 @@ val api = KoboldCPP(KoboldCPPSettings()).toChat(Llama3Template())
 ```kotlin
 val start = "This is a short story about a"
 // KoboldCPP flags since it's the api we're using, createFlags() creates a flags object for whichever api you're using, some apis might have flags that others don't.
-val flags = api.createFlags().apply {
+val flags = api.buildFlags {
     max_length = 50
 }
 // Assuming we're already in a suspend context
@@ -66,8 +66,8 @@ print(result.getText())
 ## Streaming responses
 ```kotlin
 val start = "This is a short story about a"
-// KoboldCPP flags since it's the api we're using, createFlags() creates a flags object for whichever api you're using, some apis might have flags that others don't.
-val flags = api.createFlags().apply {
+// Some apis might have flags which others don't, if you need a method to support any API, use runIfImpl<Type> {  }
+val flags = api.buildFlags {
     max_length = 50
     
     stream = true
@@ -104,7 +104,7 @@ val exampleChat = api.createChat {
         role = ChatGen.ChatRole.User
     }
 }
-val flags = api.createFlags().init {
+val flags = api.buildFlags {
     max_length = 50
 }
 val result = api.chatGen(exampleChat, flags).getOrThrow()
