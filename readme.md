@@ -5,16 +5,18 @@ An experimental library for calling LLM apis from Kotlin.
 
 Everything is bound to change
 
-| Feature                   | Status |
-|---------------------------|--------|
-| Raw prompting             | ✅      |
-| Chat prompting            | ✅      |
-| Chat templates (with DSL) | ✅      |
-| Result streaming          | ✅      |
-| Generation flags          | ✅      | <!--Flags for generations, like grammars, model selection, etc.-->
-| Message flags             | ✅      | <!--Flags for individual messages, like role, attached images, etc.-->
-| Images in prompts         | ✅      |
-| Grammars (with DSL)       | ✅      |
+| Feature                   | Status                           |
+|---------------------------|----------------------------------|
+| Raw prompting             | ✅                                |
+| Chat prompting            | ✅                                |
+| Chat templates (with DSL) | ✅                                |
+| Result streaming          | ✅                                |
+| Generation flags          | ✅                                | <!--Flags for generations, like grammars, model selection, etc.-->
+| Message flags             | ✅                                | <!--Flags for individual messages, like role, attached images, etc.-->
+| Images in prompts         | ✅ (only JVM + JS currently)      |
+| Grammars (with DSL)       | ✅                                |
+| Function/tool calling     | ✅ (Requires Functions submodule) |
+| Json schemas              | ❌                                |
 
 # Current implemented APIs
 * [KoboldCPP](https://github.com/LostRuins/koboldcpp)
@@ -25,7 +27,10 @@ Everything is bound to change
 To implement your own API, simply make a class which extends `API<S: Settings, F : Flags<*>>`. Settings is an object provided to the API that can be used to store an endpoint, an api key, or similar. In raw-only apis the settings object can be used to store a template, to allow for formatting chats.
 
 # Submodules
-* Function calling
+* Function calling (+ tools, TODO: 3 types of tool calls)
+  1. Grammar-based ✅
+  2. Api built-in ❌
+  3. Json schemas ❌
 
 See [submodules](submodules.md).
 

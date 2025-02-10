@@ -45,7 +45,7 @@ class KoboldCPPTests {
 
     @Test
     fun testFlags() {
-        val flags = KoboldCPPGenFlags().apply {
+        val flags = api.buildFlags {
             prompt = "This is a prompt"
             temperature = 0.7f
         }
@@ -59,7 +59,7 @@ class KoboldCPPTests {
     @Test
     fun testGen() {
         val start = "This is a short story about a"
-        val flags = KoboldCPPGenFlags().apply {
+        val flags = api.buildFlags {
             prompt = start
             maxLength = 50
 
@@ -88,7 +88,7 @@ class KoboldCPPTests {
     fun testSuccessiveGen() {
         runBlocking {
             repeat(2) {
-                api.rawGen(KoboldCPPGenFlags().apply {
+                api.rawGen(api.buildFlags {
                     prompt = "Test"
                     maxLength = 10
                 }).getOrThrow() // Use getOrThrow, otherwise errors would be missed
@@ -99,7 +99,7 @@ class KoboldCPPTests {
     @Test
     fun testStream() {
         val start = "This is a short story about a"
-        val flags = KoboldCPPGenFlags().apply {
+        val flags = api.buildFlags {
             prompt = start
             maxLength = 50
 
@@ -110,9 +110,8 @@ class KoboldCPPTests {
 
             print(start) // Start
             result.registerStreamer {
-                val chunk = it.getOrElse {
-                    it.printStackTrace()
-                    return@registerStreamer
+                val chunk = it.getOrElse {ex ->
+                    throw ex // To fail the test properly
                 }
                 print(chunk.getTokenF()) // Stream
                 System.out.flush() // Show the new tokens even before newline (since print doesn't flush)
@@ -152,7 +151,7 @@ bot:
         }
 
         val result = runBlocking {
-            chatApi.chatGen(exampleChat, KoboldCPPGenFlags().apply {
+            chatApi.chatGen(exampleChat, api.buildFlags {
                 maxLength = 200
             })
         }.getOrThrow()

@@ -50,7 +50,7 @@ class KoboldCPPFunctionCallTests {
 
 
         runBlocking {
-            val flags = KoboldCPPGenFlags().apply {
+            val flags = api.buildFlags {
                 maxLength = 1024
             } // We will use the same flags for both calls
 

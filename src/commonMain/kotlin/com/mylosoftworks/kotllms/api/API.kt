@@ -27,6 +27,7 @@ abstract class API<S: Settings, F: Flags<*>>(var settings: S): Wrapper<API<S, F>
     abstract suspend fun check(): Boolean
 
     abstract fun createFlags(): F
+    inline fun buildFlags(builder: F.() -> Unit): F = createFlags().apply(builder)
 
     // Wrapper implementations
     override fun getLinked(): Union<API<S, F>, Wrapper<API<S, F>>> = this.toUnion2()
@@ -51,7 +52,7 @@ abstract class HTTPAPI<S: Settings, F: Flags<*>>(settings: S): API<S, F>(setting
         }
     }
 
-    protected suspend fun makeHttpPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): Result<HttpResponse> {
+    protected suspend fun makeHttpPost(path: String, flags: F, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: HashMap<String, JsonElement>.() -> Unit = {}): Result<HttpResponse> {
         return wrapTryCatchToResult {
             client.post(getApiUrl(path)) {
                 settings.applyToRequest(this)
@@ -65,7 +66,7 @@ abstract class HTTPAPI<S: Settings, F: Flags<*>>(settings: S): API<S, F>(setting
         }
     }
 
-    protected suspend fun makeHttpSSEPost(path: String, flags: KoboldCPPGenFlags, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit): Result<Unit> {
+    protected suspend fun makeHttpSSEPost(path: String, flags: F, extraSettings: (HttpRequestBuilder) -> Unit = {}, block: suspend ClientSSESession.() -> Unit): Result<Unit> {
         return wrapTryCatchToResult {
             client.sse(getApiUrl(path), {
                 method = HttpMethod.Post
