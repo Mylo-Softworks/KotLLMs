@@ -3,9 +3,7 @@ package api
 import com.mylosoftworks.kotllms.api.StreamedGenerationResult
 import com.mylosoftworks.kotllms.api.impl.OpenAI
 import com.mylosoftworks.kotllms.api.impl.OpenAISettings
-import com.mylosoftworks.kotllms.api.impl.extenders.toChat
 import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
-import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
 import com.mylosoftworks.kotllms.features.impl.ChatGen
 import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.toAttached
