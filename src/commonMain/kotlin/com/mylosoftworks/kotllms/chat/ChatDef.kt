@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonElement
 class ChatDef<M : ChatMessage> (val createEmpty: () -> M): ToJson {
     var messages = mutableListOf<M>()
 
-    fun lastMessageImages() = messages.last().runIfImpl<ChatFeatureImages, List<AttachedImage>> { images }
+    fun lastMessageImages() = messages.last().runIfImpl<ChatFeatureImages, List<AttachedImage>> { images ?: listOf() }
 
     fun addMessage(message: M) {
         messages.add(message)

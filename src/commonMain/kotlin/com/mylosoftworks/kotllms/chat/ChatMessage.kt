@@ -29,7 +29,7 @@ open class ChatMessage: Flaggable<Any>, ChatFeatureContent, ChatFeatureRole, ToJ
  * A chat message meant to be used with ChatTemplate, to be turned into a prompt string.
  */
 open class ChatMessageTemplated : ChatMessage(), ChatFeatureImages { // Open class, since you can add extra message variables
-    override var images = listOf<AttachedImage>()
+    override var images: List<AttachedImage>? = listOf<AttachedImage>()
 
     override var role by flag<ChatGen.ChatRole>() // Store as actual ChatRole
 }

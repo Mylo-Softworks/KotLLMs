@@ -5,11 +5,13 @@ import com.mylosoftworks.kotllms.api.settingfeatures.SettingFeatureAuth
 import com.mylosoftworks.kotllms.api.settingfeatures.SettingFeatureUrl
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.ChatMessage
+import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
 import com.mylosoftworks.kotllms.features.*
 import com.mylosoftworks.kotllms.features.flagsimpl.*
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.jsonSettings
 import com.mylosoftworks.kotllms.runIfImpl
+import com.mylosoftworks.kotllms.shared.AttachedImage
 import com.mylosoftworks.kotllms.stripTrailingSlash
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -145,8 +147,26 @@ class OpenAIGenerationResultsStreamed: StreamedGenerationResult<OpenAIStreamChun
     }
 }
 
-class OpenAIChatMessage: ChatMessage() {
+class OpenAIChatMessage : ChatMessage(), ChatFeatureImages {
     // TODO: Allow media like images etc
+
+    override var images: List<AttachedImage>? by flag<List<AttachedImage>>()
+
+    @Suppress("UNCHECKED_CAST")
+    override fun toJson(): JsonElement {
+        if (images?.isEmpty() != false) return super.toJson()
+        val copy = HashMap(setFlags)
+        val images = copy.remove("images") as? List<AttachedImage>
+        val textContent = copy.remove("content") as? String
+        val content = mutableListOf<HashMap<String, Any>?>(
+            textContent?.let { hashMapOf("type" to "text", "text" to it) }
+        )
+        images?.forEach {
+            content.add(hashMapOf("type" to "image_url", "image_url" to hashMapOf("url" to "data:image/png;base64,"+it.base64)))
+        }
+        copy["content"] = content.filterNotNull().toJson()
+        return copy.toJson()
+    }
 }
 
 /**

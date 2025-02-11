@@ -3,16 +3,23 @@ package api
 import com.mylosoftworks.kotllms.api.StreamedGenerationResult
 import com.mylosoftworks.kotllms.api.impl.OpenAI
 import com.mylosoftworks.kotllms.api.impl.OpenAISettings
+import com.mylosoftworks.kotllms.api.impl.extenders.toChat
+import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
+import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
 import com.mylosoftworks.kotllms.features.impl.ChatGen
+import com.mylosoftworks.kotllms.runIfImpl
+import com.mylosoftworks.kotllms.shared.toAttached
 import kotlinx.coroutines.runBlocking
+import javax.imageio.ImageIO
+import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class OpenAITests {
 //    val api: OpenAI = OpenAI(OpenAISettings(System.getenv("openai_key"))) // Can't test on official OpenAI api currently since I don't have credits
-    val api: OpenAI = OpenAI(OpenAISettings(null, url = "http://localhost:5001/v1/"))
-//    val api: OpenAI = OpenAI(OpenAISettings(System.getenv("openrouter_key"), url = "https://openrouter.ai/api/v1"))
+//    val api: OpenAI = OpenAI(OpenAISettings(null, url = "http://localhost:5001/v1/"))
+    val api: OpenAI = OpenAI(OpenAISettings(System.getenv("openrouter_key"), url = "https://openrouter.ai/api/v1"))
 
     @Test
     fun check() {
@@ -93,5 +100,27 @@ class OpenAITests {
                 if (chunk.isLastToken()) println()
             }
         }
+    }
+
+    // Assuming the current api supports images in chats
+    @Test
+    fun testImage() {
+        val image = ImageIO.read(Path("testres/ReadTest.png").toFile())
+
+        val exampleChat = api.createChat {
+            createMessage {
+                content = "What do you see in this image?"
+                role = ChatGen.ChatRole.User
+                runIfImpl<ChatFeatureImages> {
+                    images = listOf(image.toAttached())
+                }
+            }
+        }
+
+        val result = runBlocking {
+            api.chatGen(exampleChat, api.buildFlags { model = "google/gemini-2.0-flash-lite-preview-02-05:free" })
+        }.getOrThrow()
+
+        println(result.getText())
     }
 }
