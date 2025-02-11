@@ -10,5 +10,5 @@ import com.mylosoftworks.kotllms.features.Flags
  * @sample [com.mylosoftworks.kotllms.api.impl.OpenAI.chatGen]
  */
 interface FlagGenRequest<F: Flags> {
-    suspend fun internalGen(url: String, flags: F): Result<GenerationResult>
+    suspend fun internalGen(url: String, flags: F, streamLikeChat: Boolean = false): Result<GenerationResult>
 }

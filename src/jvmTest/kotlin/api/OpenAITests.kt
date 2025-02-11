@@ -39,7 +39,7 @@ class OpenAITests {
     @Test
     fun testGeneration() {
         runBlocking {
-            val result = api.rawGen("This is a short story about a").getOrThrow()
+            val result = api.rawGen("This is a short story about a", api.buildFlags { maxLength = 200 }).getOrThrow()
             println(result.getText())
         }
     }
@@ -47,7 +47,7 @@ class OpenAITests {
     @Test
     fun testStreaming() {
         runBlocking {
-            val result = api.rawGen("This is a short story about a", api.buildFlags { stream = true }).getOrThrow() as StreamedGenerationResult<*>
+            val result = api.rawGen("This is a short story about a", api.buildFlags { maxLength = 200;stream = true }).getOrThrow() as StreamedGenerationResult<*>
             result.registerStreamer {
                 val chunk = it.getOrThrow()
                 print(chunk.getTokenF())
@@ -71,7 +71,7 @@ class OpenAITests {
                 }
             }
 
-            val result = api.chatGen(chat, api.buildFlags { model = "google/gemini-2.0-flash-lite-preview-02-05:free" }).getOrThrow()
+            val result = api.chatGen(chat, api.buildFlags { maxLength = 200;model = "google/gemini-2.0-flash-lite-preview-02-05:free" }).getOrThrow()
 
             println(result.getText())
         }
@@ -91,7 +91,7 @@ class OpenAITests {
                 }
             }
 
-            val stream = api.chatGen(chat, api.buildFlags { model = "google/gemini-2.0-flash-lite-preview-02-05:free";stream = true }).getOrThrow() as StreamedGenerationResult<*>
+            val stream = api.chatGen(chat, api.buildFlags { maxLength = 200;model = "google/gemini-2.0-flash-lite-preview-02-05:free";stream = true }).getOrThrow() as StreamedGenerationResult<*>
 
             stream.registerStreamer {
                 val chunk = it.getOrThrow()
@@ -109,7 +109,7 @@ class OpenAITests {
 
         val exampleChat = api.createChat {
             createMessage {
-                content = "What do you see in this image?"
+                content = "What is the text in the image? Reply with the text only."
                 role = ChatGen.ChatRole.User
                 runIfImpl<ChatFeatureImages> {
                     images = listOf(image.toAttached())
@@ -118,7 +118,7 @@ class OpenAITests {
         }
 
         val result = runBlocking {
-            api.chatGen(exampleChat, api.buildFlags { model = "google/gemini-2.0-flash-lite-preview-02-05:free" })
+            api.chatGen(exampleChat, api.buildFlags { maxLength = 200;model = "google/gemini-2.0-flash-lite-preview-02-05:free" })
         }.getOrThrow()
 
         println(result.getText())

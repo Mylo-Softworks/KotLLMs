@@ -37,13 +37,13 @@ class OpenAI(settings: OpenAISettings = OpenAISettings(null)): HTTPAPI<OpenAISet
         }
     }
 
-    override suspend fun internalGen(url: String, flags: OpenAIGenFlags): Result<GenerationResult> {
-        return openAIInternalGen(url, flags)
+    override suspend fun internalGen(url: String, flags: OpenAIGenFlags, streamLikeChat: Boolean): Result<GenerationResult> {
+        return openAIInternalGen(url, flags, streamLikeChat)
     }
 
     override suspend fun rawGen(prompt: String, flags: OpenAIGenFlags?): Result<GenerationResult> {
         val appliedFlags = (flags ?: createFlags()).apply { setFlags["prompt"] = prompt.toJson() }
-        return internalGen("/completions", appliedFlags)
+        return internalGen("/completions", appliedFlags, false)
     }
 
     override suspend fun <M2 : OpenAIChatMessage> chatGen(
@@ -51,7 +51,7 @@ class OpenAI(settings: OpenAISettings = OpenAISettings(null)): HTTPAPI<OpenAISet
         flags: OpenAIGenFlags?
     ): Result<GenerationResult> {
         val appliedFlags = (flags ?: createFlags()).apply { setFlags["messages"] = chatDef.toJson() }
-        return internalGen("/chat/completions", appliedFlags)
+        return internalGen("/chat/completions", appliedFlags, true)
     }
 
     override fun createChat(block: ChatDef<OpenAIChatMessage>.() -> Unit): ChatDef<OpenAIChatMessage> {
@@ -148,15 +148,11 @@ class OpenAIGenerationResultsStreamed: StreamedGenerationResult<OpenAIStreamChun
 }
 
 class OpenAIChatMessage : ChatMessage(), ChatFeatureImages {
-    // TODO: Allow media like images etc
+    override var images: List<AttachedImage>? = mutableListOf()
 
-    override var images: List<AttachedImage>? by flag<List<AttachedImage>>()
-
-    @Suppress("UNCHECKED_CAST")
     override fun toJson(): JsonElement {
         if (images?.isEmpty() != false) return super.toJson()
         val copy = HashMap(setFlags)
-        val images = copy.remove("images") as? List<AttachedImage>
         val textContent = copy.remove("content") as? String
         val content = mutableListOf<HashMap<String, Any>?>(
             textContent?.let { hashMapOf("type" to "text", "text" to it) }
@@ -172,7 +168,7 @@ class OpenAIChatMessage : ChatMessage(), ChatFeatureImages {
 /**
  * Internal gen function compatible with OpenAI compatible endpoints. Useful for supporting proxies with more input features which still output in a compatible format.
  */
-suspend fun <F: Flags> HTTPAPI<*, F>.openAIInternalGen(url: String, flags: F): Result<GenerationResult> {
+suspend fun <F: Flags> HTTPAPI<*, F>.openAIInternalGen(url: String, flags: F, streamLikeChat: Boolean = false): Result<GenerationResult> {
     if (flags.runIfImpl<FlagStream, Boolean?> { stream } == true) {
         // Streamed
 
@@ -187,7 +183,7 @@ suspend fun <F: Flags> HTTPAPI<*, F>.openAIInternalGen(url: String, flags: F): R
                             val obj = jsonSettings.parseToJsonElement(data).jsonObject
                             val chunk = obj["choices"]!!.jsonArray[0]
 
-                            if (obj["object"]?.jsonPrimitive?.content == "chat.completion.chunk") {
+                            if (streamLikeChat) {
                                 val newChunk = jsonSettings.decodeFromJsonElement<OpenAIChatStreamChunk>(chunk).toRegular()
                                 result.update(newChunk)
                                 lastChunk = newChunk

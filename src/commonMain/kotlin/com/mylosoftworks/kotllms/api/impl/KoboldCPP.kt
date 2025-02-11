@@ -56,7 +56,11 @@ class KoboldCPP(settings: KoboldCPPSettings = KoboldCPPSettings()) : HTTPAPI<Kob
         })
     }
 
-    override suspend fun internalGen(url: String, flags: KoboldCPPGenFlags): Result<GenerationResult> {
+    override suspend fun internalGen(
+        url: String,
+        flags: KoboldCPPGenFlags,
+        streamLikeChat: Boolean // Chat isn't currently implemented for KoboldCPP in favor of templates.
+    ): Result<GenerationResult> {
         if (flags.stream==true) {
             // Streamed
 
