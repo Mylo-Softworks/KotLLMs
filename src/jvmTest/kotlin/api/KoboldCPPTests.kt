@@ -10,6 +10,7 @@ import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
 import com.mylosoftworks.kotllms.features.impl.ChatGen
+import com.mylosoftworks.kotllms.features.impl.ChatRole
 import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.toAttached
 import kotlinx.coroutines.runBlocking
@@ -138,11 +139,11 @@ bot:
         val exampleChat = chatApi.createChat {
             createMessage {
                 content = "Hi!"
-                role = ChatGen.ChatRole.Assistant
+                role = ChatRole.Assistant
             }
             createMessage {
                 content = "What's up?"
-                role = ChatGen.ChatRole.User
+                role = ChatRole.User
             }
         }
 
@@ -165,7 +166,7 @@ bot:
         val exampleChat = chatApi.createChat {
             createMessage {
                 content = "What do you see in this image?"
-                role = ChatGen.ChatRole.User
+                role = ChatRole.User
                 runIfImpl<ChatFeatureImages> {
                     images = listOf(image.toAttached())
                 }

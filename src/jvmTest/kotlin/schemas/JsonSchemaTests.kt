@@ -8,7 +8,7 @@ import org.junit.Test
 class JsonSchemaTests {
     @Test
     fun testBasicJsonSchema() {
-        val schema = JsonSchema("name", JsonSchemaObject {
+        val schema = JsonSchema("name", schema = JsonSchemaObject {
             addType("string", JsonType.String)
             addObject("object") {
                 addTypeArray("array", JsonType.Number)

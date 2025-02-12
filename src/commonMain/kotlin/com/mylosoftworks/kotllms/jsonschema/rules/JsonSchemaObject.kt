@@ -1,5 +1,6 @@
 package com.mylosoftworks.kotllms.jsonschema.rules
 
+import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.Union
 import com.mylosoftworks.kotllms.features.toJson
 import com.mylosoftworks.kotllms.jsonschema.JsonSchemaRule
@@ -28,6 +29,10 @@ class JsonSchemaObject(): JsonSchemaRule() {
             "required" to required.toJson(),
             "additionalProperties" to additionalProperties.nonNull().toJson()
         ))
+    }
+
+    override fun GBNF.buildGBNF() {
+        TODO("Not yet implemented")
     }
 
     fun add(name: String, value: JsonSchemaRule, required: Boolean = true) {

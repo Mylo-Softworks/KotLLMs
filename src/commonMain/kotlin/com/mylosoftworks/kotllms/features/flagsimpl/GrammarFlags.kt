@@ -1,6 +1,7 @@
 package com.mylosoftworks.kotllms.features.flagsimpl
 
 import com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.kotllms.jsonschema.JsonSchema
 
 // Flags for grammar (Currently only GBNF grammars are supported)
 
@@ -9,4 +10,6 @@ interface FlagGrammarGBNF {
     fun setGbnfGrammarRaw(gbnf: String?)
 }
 
-// TODO: Support response format (Like in OpenAI api). Integrate with serialization to allow simple kotlin parsing.
+interface FlagStructuredResponse {
+    var responseFormat: JsonSchema?
+}

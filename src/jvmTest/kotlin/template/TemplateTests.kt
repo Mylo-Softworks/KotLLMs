@@ -4,7 +4,7 @@ import com.mylosoftworks.kotllms.chat.ChatMessageTemplated
 import com.mylosoftworks.kotllms.chat.ChatDef
 import com.mylosoftworks.kotllms.chat.templated.ChatTemplateDSL
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
-import com.mylosoftworks.kotllms.features.impl.ChatGen
+import com.mylosoftworks.kotllms.features.impl.ChatRole
 import kotlin.test.Test
 
 class TemplateTests {
@@ -13,11 +13,11 @@ class TemplateTests {
         val exampleChat = ChatDef{ChatMessageTemplated()}.apply {
             createMessage {
                 content = "Hi!"
-                role = ChatGen.ChatRole.Assistant
+                role = ChatRole.Assistant
             }
             createMessage {
                 content = "What's up?"
-                role = ChatGen.ChatRole.User
+                role = ChatRole.User
             }
         }
         val template = ChatTemplateDSL {
@@ -45,11 +45,11 @@ assistant:
         val exampleChat = ChatDef{ChatMessageTemplated()}.apply {
             createMessage {
                 content = "Hi!"
-                role = ChatGen.ChatRole.Assistant
+                role = ChatRole.Assistant
             }
             createMessage {
                 content = "What's up?"
-                role = ChatGen.ChatRole.User
+                role = ChatRole.User
             }
         }
 

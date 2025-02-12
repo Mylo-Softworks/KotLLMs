@@ -1,5 +1,6 @@
 package com.mylosoftworks.kotllms.jsonschema.rules
 
+import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.features.toJson
 import com.mylosoftworks.kotllms.jsonschema.JsonSchemaRule
 import kotlinx.serialization.json.JsonElement
@@ -17,6 +18,10 @@ class JsonSchemaAnyOf(): JsonSchemaRule() {
         return JsonObject(hashMapOf(
             "anyOf" to items.map { it.build() }.toJson()
         ))
+    }
+
+    override fun GBNF.buildGBNF() {
+        TODO("Not yet implemented")
     }
 
     // Functions for adding entries (NOTE: also has similar functions inside of JsonSchemaObject)

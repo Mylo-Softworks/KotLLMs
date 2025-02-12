@@ -5,6 +5,12 @@ import com.mylosoftworks.kotllms.api.impl.OpenAI
 import com.mylosoftworks.kotllms.api.impl.OpenAISettings
 import com.mylosoftworks.kotllms.chat.features.ChatFeatureImages
 import com.mylosoftworks.kotllms.features.impl.ChatGen
+import com.mylosoftworks.kotllms.features.impl.ChatRole
+import com.mylosoftworks.kotllms.jsonschema.JsonSchema
+import com.mylosoftworks.kotllms.jsonschema.rules.JsonSchemaAnyOf
+import com.mylosoftworks.kotllms.jsonschema.rules.JsonSchemaArray
+import com.mylosoftworks.kotllms.jsonschema.rules.JsonSchemaObject
+import com.mylosoftworks.kotllms.jsonschema.rules.JsonType
 import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.toAttached
 import kotlinx.coroutines.runBlocking
@@ -61,11 +67,11 @@ class OpenAITests {
             val chat = api.createChat {
                 createMessage {
                     content = "You are a helpful AI assistant."
-                    role = ChatGen.ChatRole.System
+                    role = ChatRole.System
                 }
                 createMessage {
                     content = "What can you do?"
-                    role = ChatGen.ChatRole.User
+                    role = ChatRole.User
                 }
             }
 
@@ -81,11 +87,11 @@ class OpenAITests {
             val chat = api.createChat {
                 createMessage {
                     content = "You are a helpful AI assistant."
-                    role = ChatGen.ChatRole.System
+                    role = ChatRole.System
                 }
                 createMessage {
                     content = "What can you do?"
-                    role = ChatGen.ChatRole.User
+                    role = ChatRole.User
                 }
             }
 
@@ -108,7 +114,7 @@ class OpenAITests {
         val exampleChat = api.createChat {
             createMessage {
                 content = "What is the text in the image? Reply with the text only."
-                role = ChatGen.ChatRole.User
+                role = ChatRole.User
                 runIfImpl<ChatFeatureImages> {
                     images = listOf(image.toAttached())
                 }
@@ -120,5 +126,49 @@ class OpenAITests {
         }.getOrThrow()
 
         println(result.getText())
+    }
+
+    @Test
+    fun testSchemaResponse() {
+        val schema = JsonSchema("Simple boolean", "Contains a single boolean, and nothing more.", JsonType.Boolean)
+
+        val exampleChat = api.createChat {
+            createMessage {
+                content = "Is 9 > 5?" // An easy question
+                role = ChatRole.User
+            }
+        }
+
+        val result = runBlocking {
+            api.chatGen(exampleChat, api.buildFlags { responseFormat = schema;model = "google/gemini-2.0-flash-lite-preview-02-05:free" })
+        }.getOrThrow()
+
+        assert(result.getText() == "true")
+    }
+
+    @Test
+    fun testSchemaResponseStreamed() {
+        val schema = JsonSchema("Boolean list", "Contains a list of booleans, and a description for the task.", JsonSchemaObject {
+            addType("Interesting cat fact", JsonType.String) // string
+            addTypeArray("List", JsonType.Boolean) // bool[]
+        })
+
+        val exampleChat = api.createChat {
+            createMessage {
+                content = "Is 9 > 5? Answer 50 times with alternating values, the first value should be the answer to the question."
+                role = ChatRole.User
+            }
+        }
+
+        runBlocking {
+            val result = api.chatGen(exampleChat, api.buildFlags { responseFormat = schema;stream = true;model = "google/gemini-2.0-flash-lite-preview-02-05:free" }).getOrThrow() as StreamedGenerationResult<*>
+
+            result.registerStreamer {
+                val chunk = it.getOrThrow()
+                print(chunk.getTokenF())
+                System.out.flush()
+                if (chunk.isLastToken()) println()
+            }
+        }
     }
 }

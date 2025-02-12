@@ -10,6 +10,7 @@ import com.mylosoftworks.kotllms.features.*
 import com.mylosoftworks.kotllms.features.flagsimpl.*
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.jsonSettings
+import com.mylosoftworks.kotllms.jsonschema.JsonSchema
 import com.mylosoftworks.kotllms.runIfImpl
 import com.mylosoftworks.kotllms.shared.AttachedImage
 import com.mylosoftworks.kotllms.stripTrailingSlash
@@ -70,7 +71,7 @@ class OpenAISettings(override var apiKey: String?, url: String = "https://api.op
 
 class OpenAIGenFlags: Flags(),
         FlagMaxLength, FlagStream, FlagRepetitionPenalty, FlagPresencePenalty,
-        FlagStopSequences, FlagTemperature, FlagTopP, FlagModel
+        FlagStopSequences, FlagTemperature, FlagTopP, FlagModel, FlagStructuredResponse
 {
     override var model: String? by flag<String>().jsonBacked()
 
@@ -82,6 +83,7 @@ class OpenAIGenFlags: Flags(),
     override var presencePenalty: Float? by flag<Float>("presence_penalty").jsonBacked()
     override var stopSequences by stringListFlag("stop")
     override var stream: Boolean? by flag<Boolean>().jsonBacked()
+    override var responseFormat: JsonSchema? by flag<JsonSchema>("response_format").jsonBacked({this.buildResponseFormat()}, {null})
 }
 
 @Serializable

@@ -15,11 +15,12 @@ interface ChatGen<F: Flags, M : ChatMessage> {
 
     fun createChat(block: ChatDef<M>.() -> Unit): ChatDef<M>
 
-    enum class ChatRole(val genericName: String) {
-        User("user"), System("system"), Assistant("assistant");
+}
 
-        override fun toString(): String {
-            return genericName
-        }
+enum class ChatRole(val genericName: String) {
+    User("user"), System("system"), Assistant("assistant");
+
+    override fun toString(): String {
+        return genericName
     }
 }
