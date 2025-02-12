@@ -52,7 +52,57 @@ class JsonSchema(val name: String, val description: String? = null, val schema: 
     fun build() = schema.build()
 
     /**
-     * Builds a GBNF for parsing the Json Schema TODO: Not implemented yet
+     * Builds a GBNF for parsing the Json Schema
      */
-    fun buildGBNF(): Nothing = TODO()// GBNF{ schema.buildGBNF(this) }
+    fun buildGBNF() = GBNF{
+        val whiteSpace = "whitespace" {
+            anyCount {
+                -" \t\n\r"
+            }
+        }
+        val string = "string" {
+            +"\"" // Json only supports double quotes
+            anyCount {
+                oneOf {
+                    +"\\" // Allow escaping escapes
+                    +"\\\"" // Capture escaped quotes
+                    -!"\"" // Capture everything else except unescaped quotes
+                }
+            }
+            +"\""
+        }
+        val boolean = "boolean" {
+            oneOf {
+                +"true"
+                +"false"
+            }
+        }
+        val nullVal = "null" {
+            +"null"
+        }
+        val integer = "int" {
+            optional { +"-" } // Sign
+            oneOrMore { -"0-9" } // Value
+        }
+        val number = "number" {
+            optional { +"-" } // Sign
+            oneOf {
+                group {
+                    oneOrMore { -"0-9" }
+                    optional { +"." }
+                    anyCount { -"0-9" }
+                }
+                group {
+                    anyCount { -"0-9" }
+                    optional { +"." }
+                    anyCount { -"0-9" }
+                }
+            }
+            optional { // Exponent
+                -"eE"
+                oneOrMore { -"0-9" }
+            }
+        }
+        schema.buildGBNF(this, CommonDefs(whiteSpace, string, boolean, nullVal, integer, number))
+    }
 }

@@ -1,7 +1,8 @@
 package com.mylosoftworks.kotllms.jsonschema.rules
 
-import com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.features.toJson
+import com.mylosoftworks.kotllms.jsonschema.CommonDefs
 import com.mylosoftworks.kotllms.jsonschema.JsonSchemaRule
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -20,8 +21,10 @@ class JsonSchemaAnyOf(): JsonSchemaRule() {
         ))
     }
 
-    override fun GBNF.buildGBNF() {
-        TODO("Not yet implemented")
+    override fun GBNFEntity.buildGBNF(commonDefs: CommonDefs) {
+        oneOf {
+            items.forEach { it.buildGBNF(this, commonDefs) }
+        }
     }
 
     // Functions for adding entries (NOTE: also has similar functions inside of JsonSchemaObject)

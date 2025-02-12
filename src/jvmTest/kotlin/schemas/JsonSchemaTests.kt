@@ -20,4 +20,19 @@ class JsonSchemaTests {
 
         println(schema.build())
     }
+
+    @Test
+    fun testSchemaGrammar() {
+        val schema = JsonSchema("name", schema = JsonSchemaObject {
+            addType("string", JsonType.String)
+            addObject("object") {
+                addTypeArray("array", JsonType.Number)
+            }
+            addObjectArray("array") {
+                addType("name", JsonType.String)
+            }
+        })
+
+        println(schema.buildGBNF().compile())
+    }
 }

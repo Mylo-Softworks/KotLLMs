@@ -1,8 +1,10 @@
 package com.mylosoftworks.kotllms.jsonschema.rules
 
 import com.mylosoftworks.gbnfkotlin.GBNF
+import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.Union
 import com.mylosoftworks.kotllms.features.toJson
+import com.mylosoftworks.kotllms.jsonschema.CommonDefs
 import com.mylosoftworks.kotllms.jsonschema.JsonSchemaRule
 import com.mylosoftworks.kotllms.nonNull
 import com.mylosoftworks.kotllms.toUnion1
@@ -31,8 +33,73 @@ class JsonSchemaObject(): JsonSchemaRule() {
         ))
     }
 
-    override fun GBNF.buildGBNF() {
-        TODO("Not yet implemented")
+    override fun GBNFEntity.buildGBNF(commonDefs: CommonDefs) {
+        +"{"
+        val valsMapped = properties.map {(key, value) ->
+            (key in required) to (this.host ?: this as GBNF).entity {
+                commonDefs.whitespace()
+                +"\""
+                +key
+                +"\":"
+                commonDefs.whitespace()
+                value.buildGBNF(this, commonDefs)
+                commonDefs.whitespace()
+            }
+        }
+        var first = true
+        valsMapped.forEach {
+            if (!first) +","
+            first = false
+
+            if (it.first) {
+                it.second()
+            }
+            else {
+                optional {
+                    it.second()
+                }
+            }
+        }
+        commonDefs.whitespace()
+        +"}"
+//        val keys = properties.keys
+//        keys.forEachIndexed {idx, key ->
+//            val value = properties[key]!!
+//            val couldBeLast = keys.drop(idx+1).find { it in required } == null
+//            val isLast = idx == keys.size - 1
+//
+//            commonDefs.whitespace()
+//            if (key in required) {
+//                +"\""
+//                +key
+//                +"\":"
+//                commonDefs.whitespace()
+//                value.buildGBNF(this, commonDefs)
+//                commonDefs.whitespace()
+//                if (couldBeLast) {
+//                    optional { +",O" }
+//                }
+//                else if (!isLast) {
+//                    +",R"
+//                }
+//            }
+//            else {
+//                optional {
+//                    +"\""
+//                    +key
+//                    +"\":"
+//                    commonDefs.whitespace()
+//                    value.buildGBNF(this, commonDefs)
+//                    commonDefs.whitespace()
+//                    if (couldBeLast) {
+//                        optional { +"," }
+//                    }
+//                    else if (!isLast) {
+//                        +","
+//                    }
+//                }
+//            }
+//        }
     }
 
     fun add(name: String, value: JsonSchemaRule, required: Boolean = true) {
