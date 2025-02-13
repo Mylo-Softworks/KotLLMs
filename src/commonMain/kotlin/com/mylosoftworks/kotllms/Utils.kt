@@ -16,10 +16,35 @@ inline fun <reified T, R> Any.runIfImpl(block: T.() -> R): R? {
     return null
 }
 
+inline fun <reified T> Any.runIfImplR(block: T.() -> RunResult): Pair<RunResult, Any> {
+    if (this is T) return block(this) to this
+    return RunResult.Failed to this
+}
+
+enum class RunResult {
+    Success, Failed
+}
+
 /**
  * Run the block if `this` implements [T], no return value
  */
-inline fun <reified T> Any.runIfImpl(block: T.() -> Unit) = runIfImpl<T, Unit>(block)
+inline fun <reified T> Any.runIfImpl(block: T.() -> Unit): Pair<RunResult, Any> {
+    if (this is T) {
+        block(this)
+        RunResult.Success to this
+    }
+    return RunResult.Failed to this
+}
+
+inline fun <reified T> Pair<RunResult, Any>.elseIfImplRun(block: T.() -> Unit): Pair<RunResult, Any> {
+    if (this.first == RunResult.Success) return RunResult.Success to this
+    return this.second.runIfImpl<T>(block)
+}
+
+inline fun Pair<RunResult, Any>.elseRun(block: () -> Unit) {
+    if (this.first == RunResult.Failed) block()
+}
+
 
 inline fun <reified T> Any.tryCast() = this as? T
 

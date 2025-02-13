@@ -66,8 +66,7 @@ class AutoParseTests {
             value: "I am a helpful AI assistant based on Llama 3. I'm a function calling model, which means I'm a tool that allows you to execute actions by calling functions. I'm here to help you with any questions or tasks you may have, so feel free to ask me anything!"
         """.trimIndent() + "\n" // The newline is included in the grammar, but gets trimmed with trimIndent, so I've added it back manually
 
-        val (call, thoughts) = exampleFunctions.parseFunctionCall(testInput).getOrThrow()
-        assert(thoughts == "I am a helpful AI assistant based on Llama 3. I'm a function calling model, which means I'm a tool, ") { "Thoughts don't match parsed" }
+        val call = exampleFunctions.parseFunctionCall(testInput).getOrThrow()
 
         // Invoke the print function
         runBlocking {

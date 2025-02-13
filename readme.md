@@ -29,10 +29,9 @@ Everything is bound to change
 To implement your own API, simply make a class which extends `API<S: Settings, F : Flags<*>>`. Settings is an object provided to the API that can be used to store an endpoint, an api key, or similar. In raw-only apis the settings object can be used to store a template, to allow for formatting chats.
 
 # Submodules
-* Function calling (+ tools, TODO: 3 types of tool calls)
+* Function calling (+ tools)
   1. Grammar-based ✅
-  2. Api built-in ❌
-  3. Json schemas ❌
+  2. Tools (api built-in) ✅ (TODO: Support proper tool returns using call ids)
 
 See [submodules](submodules.md).
 

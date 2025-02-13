@@ -23,7 +23,9 @@ class JsonSchemaAnyOf(): JsonSchemaRule() {
 
     override fun GBNFEntity.buildGBNF(commonDefs: CommonDefs) {
         oneOf {
-            items.forEach { it.buildGBNF(this, commonDefs) }
+            group { // Don't forget to group, otherwise all shallow children will be a union
+                items.forEach { it.buildGBNF(this, commonDefs) }
+            }
         }
     }
 

@@ -12,6 +12,10 @@ interface Cancellable {
     suspend fun cancel()
 }
 
+interface SeparateToolCalls {
+    fun getToolCallsString(): String?
+}
+
 abstract class StreamChunk {
     abstract fun getTokenF(): String
     abstract fun isLastToken(): Boolean

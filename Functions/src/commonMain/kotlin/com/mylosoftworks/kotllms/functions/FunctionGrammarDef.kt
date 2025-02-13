@@ -8,9 +8,9 @@ import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
  */
 abstract class FunctionGrammarDef {
     /**
-     * @return A result with a pair containing a list of the found function calls, and a string with the reasoning (if grammar supports it).
+     * @return A result with a pair containing a list of the found function calls.
      */
-    abstract fun parseFunctionCall(defs: FunctionDefs, response: String): Result<Pair<List<(suspend () -> Any?)>, String>>
+    abstract fun parseFunctionCall(defs: FunctionDefs, response: String): Result<List<(suspend () -> Any?)>>
     abstract fun getFunctionsGrammar(defs: FunctionDefs): GBNF
 }
 
@@ -22,12 +22,12 @@ class DefaultFunctionGrammar(val maxThoughtLength: Int = 100) : FunctionGrammarD
     override fun parseFunctionCall(
         defs: FunctionDefs,
         response: String
-    ): Result<Pair<List<(suspend () -> Any?)>, String>> {
+    ): Result<List<(suspend () -> Any?)>> {
         val (funcAndComment, params) = response.split("\n$paramsSplit\n")
         val (function, thoughts) = getTargettedFunctionFromResponse(defs, funcAndComment).getOrElse { return Result.failure(it) }
-        return Result.success(Pair(
-            listOf({ function.runCallBackWithParams(getParametersFromResponse(function, params)) }), thoughts
-        ))
+        return Result.success(
+            listOf({ function.runCallBackWithParams(getParametersFromResponse(function, params)) })
+        )
     }
 
     fun getTargettedFunctionFromResponse(defs: FunctionDefs, fullResponse: String): Result<Pair<FunctionDefinition<*>, String>> {
@@ -104,12 +104,12 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
     override fun parseFunctionCall(
         defs: FunctionDefs,
         response: String
-    ): Result<Pair<List<(suspend () -> Any?)>, String>> {
+    ): Result<List<(suspend () -> Any?)>> {
         val grammar = getFunctionsGrammar(defs)
 
         val (parsedTree, _) = grammar.parse(response).getOrElse { return Result.failure(it) }
 
-        val thoughtsOrEmpty = parsedTree.find { it.isNamedEntity("thoughts") }?.strValue ?: ""
+//        val thoughtsOrEmpty = parsedTree.find { it.isNamedEntity("thoughts") }?.strValue ?: ""
 
         val outList = mutableListOf<(suspend () -> Any?)>()
         val functionCalls = parsedTree.findAll(includeSelf = false) {parsed ->
@@ -119,7 +119,7 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
 
         for (functionCall in functionCalls) {
             val functionName = (functionCall.associatedEntry as GBNFEntity).identifier!!.substring("function-".length)
-            val function = defs.functions[functionName] ?: return Result.success(Pair(listOf(), thoughtsOrEmpty))
+            val function = defs.functions[functionName] ?: return Result.success(listOf())
             val paramsMap = hashMapOf<String, Pair<FunctionParameter<*>, Any?>>()
             // Find all defined parameters
             val paramPrefix = "param-${function.name}-"
@@ -130,14 +130,14 @@ class AutoParsedGrammarDef(val create: GBNF.(FunctionDefs) -> Unit) : FunctionGr
 
             definedParams.map {
                 val paramName = (it.associatedEntry as GBNFEntity).identifier!!.substring(paramPrefix.length)
-                val param = function.params[paramName] ?: return Result.success(Pair(listOf(), thoughtsOrEmpty))
+                val param = function.params[paramName] ?: return Result.success(listOf())
                 paramsMap[paramName] = param to param.parseProvidedParams(it.strValue)
             }
 
             outList.add({ function.runCallBackWithParams(paramsMap) })
         }
 
-        return Result.success(Pair(outList, thoughtsOrEmpty))
+        return Result.success(outList)
     }
 
     override fun getFunctionsGrammar(defs: FunctionDefs): GBNF {

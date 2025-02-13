@@ -1,7 +1,9 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import java.net.URI
 
 plugins {
     kotlin("multiplatform") version "2.0.20"
+    kotlin("plugin.serialization") version "2.1.0"
     id("maven-publish")
 }
 
@@ -32,6 +34,11 @@ kotlin {
         browser()
         nodejs()
     }
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
 
     sourceSets {
         commonMain {
@@ -40,6 +47,8 @@ kotlin {
                 implementation(project(":"))
                 implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:8c5eb3c4f7")
                 implementation(kotlin("reflect"))
+
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0-RC")
             }
         }
 

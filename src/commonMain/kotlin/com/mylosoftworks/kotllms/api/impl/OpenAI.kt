@@ -71,7 +71,8 @@ class OpenAISettings(override var apiKey: String?, url: String = "https://api.op
 
 class OpenAIGenFlags: Flags(),
         FlagMaxLength, FlagStream, FlagRepetitionPenalty, FlagPresencePenalty,
-        FlagStopSequences, FlagTemperature, FlagTopP, FlagModel, FlagStructuredResponse
+        FlagStopSequences, FlagTemperature, FlagTopP, FlagModel, FlagStructuredResponse,
+        FlagTools, FlagToolsParallel, FlagToolChoice
 {
     override var model: String? by flag<String>().jsonBacked()
 
@@ -84,6 +85,12 @@ class OpenAIGenFlags: Flags(),
     override var stopSequences by stringListFlag("stop")
     override var stream: Boolean? by flag<Boolean>().jsonBacked()
     override var responseFormat: JsonSchema? by flag<JsonSchema>("response_format").jsonBacked({this.buildResponseFormat()}, {null})
+
+    // Tools
+    override var tools: List<JsonSchema>? by flag<List<JsonSchema>>().jsonBacked({this.map { it.buildToolFunction() }.toJson()}, {null})
+    override var toolsSupported: Boolean? = null // This flag won't be shown.
+    override var parallelToolCalls: Boolean? by flag<Boolean>("parallel_tool_calls").jsonBacked()
+    override var toolChoice: ToolChoice? by flag<ToolChoice>("tool_choice").jsonBacked({this.strVal.toJson()}, {null})
 }
 
 @Serializable
@@ -91,14 +98,17 @@ class OpenAIModelDef(val id: String): ListedModelDef {
     override val modelName: String get() = id
 }
 
-class OpenAIGenerationResults(json: String): GenerationResult(false) {
+class OpenAIGenerationResults(json: String): GenerationResult(false), SeparateToolCalls {
     var content: String
+    var toolCalls: String? = null
     init {
         jsonSettings.parseToJsonElement(json).jsonObject.let {root ->
             root["choices"]!!.jsonArray.let {results ->
                 results[0].jsonObject.let {result ->
                     content = result["text"]?.jsonPrimitive?.content
-                        ?: result["message"]?.jsonObject?.get("content")?.jsonPrimitive?.content
+                        ?: result["message"]?.jsonObject?.also {
+                            it["tool_calls"]?.let { toolCalls = it.stringOrToString() }
+                        }?.get("content")?.jsonPrimitive?.content
                                 ?: error("Could not parse response.")
                 }
             }
@@ -106,6 +116,9 @@ class OpenAIGenerationResults(json: String): GenerationResult(false) {
     }
 
     override fun getText() = content
+    override fun getToolCallsString(): String? {
+        return toolCalls
+    }
 }
 
 @Serializable

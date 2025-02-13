@@ -18,7 +18,7 @@ interface ChatGen<F: Flags, M : ChatMessage> {
 }
 
 enum class ChatRole(val genericName: String) {
-    User("user"), System("system"), Assistant("assistant");
+    User("user"), System("system"), Assistant("assistant"), Tool("ipython"); // ipython as tool response is a llama 3 standard
 
     override fun toString(): String {
         return genericName

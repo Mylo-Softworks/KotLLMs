@@ -2,10 +2,16 @@ import com.mylosoftworks.kotllms.api.impl.KoboldCPP
 import com.mylosoftworks.kotllms.api.impl.KoboldCPPGenFlags
 import com.mylosoftworks.kotllms.api.impl.extenders.toChat
 import com.mylosoftworks.kotllms.chat.templated.presets.Llama3Template
+import com.mylosoftworks.kotllms.features.getPrimitiveValue
 import com.mylosoftworks.kotllms.features.impl.ChatGen
 import com.mylosoftworks.kotllms.features.impl.ChatRole
+import com.mylosoftworks.kotllms.features.stringOrToString
 import com.mylosoftworks.kotllms.functions.*
+import com.mylosoftworks.kotllms.jsonSettings
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlin.test.Test
 
 class KoboldCPPFunctionCallTests {
@@ -59,8 +65,7 @@ class KoboldCPPFunctionCallTests {
             val givenChat =
                 exampleChat.subChat(9, mutableListOf(systemMessage, functionList))
 
-            val (funcs, comment) = functions.requestFunctionCallsAndParse(chatApi, flags, givenChat).getOrThrow()
-            println("Comment: $comment")
+            val (funcs, response) = functions.requestFunctionCallsAndParse(chatApi, flags, givenChat).getOrThrow()
             funcs[0]()
         }
     }

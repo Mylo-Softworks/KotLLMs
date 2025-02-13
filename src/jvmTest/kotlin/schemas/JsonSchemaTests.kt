@@ -1,9 +1,12 @@
 package schemas
 
+import com.mylosoftworks.kotllms.features.stringOrToString
+import com.mylosoftworks.kotllms.jsonSettings
 import com.mylosoftworks.kotllms.jsonschema.JsonSchema
 import com.mylosoftworks.kotllms.jsonschema.rules.JsonSchemaObject
 import com.mylosoftworks.kotllms.jsonschema.rules.JsonType
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class JsonSchemaTests {
     @Test
@@ -36,5 +39,12 @@ class JsonSchemaTests {
         })
 
         println(schema.buildGBNF().compile())
+    }
+
+    @Test
+    fun testJsonStringOrObjectToString() {
+        val el = jsonSettings.parseToJsonElement("{\"test\":0}")
+        val el2 = jsonSettings.parseToJsonElement("\"{\\\"test\\\":0}\"")
+        assertEquals(el.stringOrToString(), el2.stringOrToString())
     }
 }

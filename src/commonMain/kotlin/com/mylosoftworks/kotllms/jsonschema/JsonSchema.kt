@@ -17,12 +17,13 @@ class JsonSchema(val name: String, val description: String? = null, val schema: 
      * ```
      */
     fun buildResponseFormat(): JsonObject {
-        return JsonObject(mapOf("type" to "json_schema".toJson(), "json_schema" to hashMapOf(
+        return JsonObject(linkedMapOf("type" to "json_schema".toJson(), "json_schema" to hashMapOf(
             "name" to name,
             "description" to description,
             "strict" to true,
             "schema" to build()
-        ).toJson()))
+        ).toJson())
+        )
     }
 
     /**
@@ -35,7 +36,7 @@ class JsonSchema(val name: String, val description: String? = null, val schema: 
      * ```
      */
     fun buildToolFunction(): JsonObject {
-        return JsonObject(mapOf("type" to "function".toJson(), "function" to hashMapOf(
+        return JsonObject(linkedMapOf("type" to "function".toJson(), "function" to hashMapOf(
             "name" to name,
             "description" to (description ?: ""),
             "strict" to true,

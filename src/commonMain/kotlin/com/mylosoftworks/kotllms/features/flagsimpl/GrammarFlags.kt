@@ -13,3 +13,20 @@ interface FlagGrammarGBNF {
 interface FlagStructuredResponse {
     var responseFormat: JsonSchema?
 }
+
+interface FlagTools {
+    var tools: List<JsonSchema>? // Tools can be defined as json schemas (which include name, description and rules)
+    var toolsSupported: Boolean? // Indicates if tools are supported, useful for overriding
+}
+
+interface FlagToolsParallel {
+    var parallelToolCalls: Boolean?
+}
+
+enum class ToolChoice(val strVal: String) {
+    Auto("auto"), Required("required"), None("none")
+}
+
+interface FlagToolChoice {
+    var toolChoice: ToolChoice?
+}

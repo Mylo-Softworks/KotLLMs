@@ -30,6 +30,11 @@ fun JsonElement.getPrimitiveValue(): Any? {
     return primitive.booleanOrNull ?: primitive.intOrNull ?: primitive.floatOrNull ?: primitive.contentOrNull
 }
 
+fun JsonElement.stringOrToString(): String {
+    if (this is JsonPrimitive) return this.content
+    return this.toString()
+}
+
 interface Flaggable<T: Any> {
     val setFlags: HashMap<String, T>
 }
@@ -149,76 +154,3 @@ open class WatchedFlag<T: Any, V: Any>(val flag: Flag<T, V>, val onChange: (T?) 
         flag.setValue(thisRef, property, value)
     }
 }
-
-//open class Flag<T>(val altName: String? = null) {
-//    open operator fun <U: Flaggable<T>> getValue(thisRef: U, property: KProperty<*>): T? {
-//        @Suppress("UNCHECKED_CAST")
-//        return thisRef.setFlags.getOrElse(altName ?: property.name) { null }
-//    }
-//
-//    open operator fun <U: Flaggable<T>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
-//        if (value == null) {
-//            thisRef.setFlags.remove(altName ?: property.name)
-//            return
-//        }
-//        thisRef.setFlags[altName ?: property.name] = value
-//    }
-//}
-//
-///**
-// * Maps true to false, and false to true, and null to null
-// */
-//class InvertedBoolFlag(altName: String? = null): Flag<Boolean>(altName) {
-//    override fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): Boolean? {
-//        return super.getValue(thisRef, property)?.let { !it }
-//    }
-//
-//    override fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: Boolean?) {
-//        super.setValue(thisRef, property, value?.let { !it })
-//    }
-//}
-//
-//class ConvertedFlag<T, V>(val altName: String? = null, val convert: (T) -> V) {
-//    operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): Any? {
-//        @Suppress("UNCHECKED_CAST")
-//        return thisRef.setFlags.getOrElse(altName ?: property.name) { null }?.getPrimitiveValue() as V?
-//    }
-//
-//    operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: Any?) {
-//        if (value == null) {
-//            thisRef.setFlags.remove(altName ?: property.name)
-//            return
-//        }
-//        thisRef.setFlags[altName ?: property.name] = convert(value as T)!!.toJson()
-//    }
-//}
-//
-//class BiConvertedStringFlag<T>(val altName: String? = null, val convert: (T) -> String, val unConvert: (String) -> T) {
-//    operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
-//        return unConvert(thisRef.setFlags.getOrElse(altName ?: property.name) { null }?.getPrimitiveValue().toString())
-//    }
-//
-//    operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
-//        if (value == null) {
-//            thisRef.setFlags.remove(altName ?: property.name)
-//            return
-//        }
-//        thisRef.setFlags[altName ?: property.name] = convert(value).toJson()
-//    }
-//}
-//
-//class BiConvertedJsonFlag<T>(val altName: String? = null, val convert: (T) -> JsonElement, val unConvert: (JsonElement) -> T) {
-//    operator fun <U : Flags<U>> getValue(thisRef: U, property: KProperty<*>): T? {
-//        return (thisRef.setFlags.getOrElse(altName ?: property.name) { null } as JsonElement?)?.let { unConvert(it) }
-//    }
-//
-//    operator fun <U : Flags<U>> setValue(thisRef: U, property: KProperty<*>, value: T?) {
-//        if (value == null) {
-//            thisRef.setFlags.remove(altName ?: property.name)
-//            return
-//        }
-//        thisRef.setFlags[altName ?: property.name] = convert(value).toJson()
-//    }
-//}
-//
-//fun GBNFFlag(altName: String? = null) = BiConvertedStringFlag(altName, {it?.compile() ?: ""}, {GBNFInterpreter.interpretGBNF(it).getOrNull()})
