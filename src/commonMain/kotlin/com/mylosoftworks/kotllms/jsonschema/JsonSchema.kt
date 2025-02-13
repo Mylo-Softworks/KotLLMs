@@ -7,7 +7,7 @@ import kotlinx.serialization.json.JsonObject
 /**
  * A class used to build json schemas, and parsing them.
  */
-class JsonSchema(val name: String, val description: String? = null, val schema: JsonSchemaRule) {
+class JsonSchema(val name: String? = null, val description: String? = null, val schema: JsonSchemaRule) {
 
     /**
      * (Examples are in pseudocode)
@@ -19,7 +19,7 @@ class JsonSchema(val name: String, val description: String? = null, val schema: 
     fun buildResponseFormat(): JsonObject {
         return JsonObject(linkedMapOf("type" to "json_schema".toJson(), "json_schema" to hashMapOf(
             "name" to name,
-            "description" to description,
+            "description" to (description ?: ""),
             "strict" to true,
             "schema" to build()
         ).toJson())

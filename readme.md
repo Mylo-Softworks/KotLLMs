@@ -5,19 +5,20 @@ An experimental library for calling LLM apis from Kotlin.
 
 Everything is bound to change
 
-| Feature                          | Status                        |
-|----------------------------------|-------------------------------|
-| Raw prompting                    | ✅                             |
-| Chat prompting                   | ✅                             |
-| Chat templates (with DSL)        | ✅                             |
-| Result streaming                 | ✅                             |
-| Generation flags                 | ✅                             | <!--Flags for generations, like grammars, model selection, etc.-->
-| Message flags                    | ✅                             | <!--Flags for individual messages, like role, attached images, etc.-->
-| Images in prompts                | ✅ (only JVM + JS currently)   |
-| Grammars (with DSL)              | ✅                             |
-| Function/tool calling            | ✅ (Using Functions submodule) |
-| Json schemas                     | ✅ (For non-recursive schemas) | <!--Use $defs if you want to implement recursion. This could be a separate code block opened like defs {}-->
-| Json schema to Grammar converter | ✅                             |
+| Feature                                                 | Status                        |
+|---------------------------------------------------------|-------------------------------|
+| Raw prompting                                           | ✅                             |
+| Chat prompting                                          | ✅                             |
+| Chat templates (with DSL)                               | ✅                             |
+| Result streaming                                        | ✅                             |
+| Generation flags                                        | ✅                             | <!--Flags for generations, like grammars, model selection, etc.-->
+| Message flags                                           | ✅                             | <!--Flags for individual messages, like role, attached images, etc.-->
+| Images in prompts                                       | ✅ (only JVM + JS currently)   |
+| Grammars (with DSL)                                     | ✅                             |
+| Function/tool calling                                   | ✅ (Using Functions submodule) |
+| Json schemas                                            | ✅ (For non-recursive schemas) | <!--Use $defs if you want to implement recursion. This could be a separate code block opened like defs {}-->
+| Json schema to Grammar converter                        | ✅                             |
+| Json schema fixer (ensures json schema can be streamed) | ✅                             |
 
 # Current implemented APIs
 * [KoboldCPP](https://github.com/LostRuins/koboldcpp)

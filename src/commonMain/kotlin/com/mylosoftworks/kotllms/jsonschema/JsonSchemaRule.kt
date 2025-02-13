@@ -2,6 +2,7 @@ package com.mylosoftworks.kotllms.jsonschema
 
 import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.features.ToJson
+import com.mylosoftworks.kotllms.jsonschema.rules.JsonType
 import kotlinx.serialization.json.JsonElement
 import kotlin.jvm.JvmName
 
@@ -20,6 +21,13 @@ abstract class JsonSchemaRule: ToJson {
      * Build the GBNF for generating with this schema on an api which only supports GBNF.
      */
     abstract fun GBNFEntity.buildGBNF(commonDefs: CommonDefs) // For easy implementation (automatic this receiver)
+
+    /**
+     * Function used to fill in missing values.
+     *
+     * @return A pair with a filled json element, and a boolean indicating whether it was possible based on the provided keys.
+     */
+    abstract fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean>
 }
 
 /**

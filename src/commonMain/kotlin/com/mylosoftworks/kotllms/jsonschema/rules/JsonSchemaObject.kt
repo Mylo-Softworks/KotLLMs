@@ -1,6 +1,5 @@
 package com.mylosoftworks.kotllms.jsonschema.rules
 
-import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.Union
 import com.mylosoftworks.kotllms.features.toJson
@@ -91,6 +90,25 @@ class JsonSchemaObject(): JsonSchemaRule() {
         }
         commonDefs.whitespace()
         +"}"
+    }
+
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
+        val jsonObject = (jsonElement ?: JsonObject(mapOf()))
+        if (jsonObject is JsonObject) {
+            val hasInvalidKeys = (jsonObject.keys.find { it !in properties.keys } != null) && (additionalProperties.second == false)
+            val missingKeys = required.filter { it !in jsonObject.keys }
+            if (missingKeys.isEmpty()) return jsonObject to true
+
+            var atLeastOneFalse = false
+            val currentEntries = jsonObject.entries.map {(k, v) -> k to (properties[k]?.fillIfMissing(v)?.also { if (!it.second) atLeastOneFalse = true }?.first ?: v)}.toMutableList()
+            missingKeys.forEach {key ->
+                properties[key]?.fillIfMissing(null)?.also { if (!it.second) atLeastOneFalse = true }?.first?.let { currentEntries.add(key to it) }
+            }
+
+            return JsonObject(mapOf(*currentEntries.toTypedArray())) to (!hasInvalidKeys && !atLeastOneFalse)
+        }
+
+        return null to false // Unsuccessful attempt, with no value
     }
 
     fun add(name: String, value: JsonSchemaRule, required: Boolean = true) {

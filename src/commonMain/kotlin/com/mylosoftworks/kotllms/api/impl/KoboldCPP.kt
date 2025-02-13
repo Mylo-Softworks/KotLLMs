@@ -7,6 +7,7 @@ import com.mylosoftworks.kotllms.features.*
 import com.mylosoftworks.kotllms.features.flagsimpl.*
 import com.mylosoftworks.kotllms.features.impl.*
 import com.mylosoftworks.kotllms.jsonSettings
+import com.mylosoftworks.kotllms.jsonschema.JsonSchema
 import com.mylosoftworks.kotllms.shared.AttachedImage
 import com.mylosoftworks.kotllms.stripTrailingSlash
 import io.ktor.client.request.*
@@ -113,7 +114,8 @@ class KoboldCPPSettings(url: String = "http://localhost:5001", override var apiK
 
 class KoboldCPPGenFlags : Flags(),
     FlagsAllBasic, FlagsCommonSampling, FlagTopA, FlagTfs, FlagTypical, FlagRepetitionPenaltyWithRangeSlope,
-    FlagStopSequences, FlagTrimStop, FlagEarlyStopping, FlagAttachedImages, FlagGrammarGBNF, FlagQuiet, FlagStream
+    FlagStopSequences, FlagTrimStop, FlagEarlyStopping, FlagAttachedImages, FlagGrammarGBNF, FlagQuiet, FlagStream,
+        FlagStructuredResponse
 {
     override var contextSize by flag<Int>("max_context_length").jsonBacked()
     override var maxLength by flag<Int>("max_length").jsonBacked()
@@ -144,6 +146,12 @@ class KoboldCPPGenFlags : Flags(),
         }
         setFlags["grammar"] = gbnf.toJson()
     }
+
+    override var responseFormat: JsonSchema?
+        get() = error("Response format for KoboldCPP is write-only")
+        set(value) {
+            value?.let { grammar = it.buildGBNF() }
+        }
 }
 
 @Serializable

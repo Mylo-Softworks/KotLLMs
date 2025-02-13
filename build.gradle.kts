@@ -50,6 +50,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation("com.github.Mylo-Softworks.GBNF-Kotlin:GBNF-Kotlin:8c5eb3c4f7")
+                implementation("com.github.Mylo-Softworks.Klex:Klex:3ed101743f") // Klex is used for partial json parsing
 
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 

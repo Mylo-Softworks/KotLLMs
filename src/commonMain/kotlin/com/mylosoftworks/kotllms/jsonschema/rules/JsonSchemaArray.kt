@@ -5,10 +5,11 @@ import com.mylosoftworks.gbnfkotlin.entries.GBNFEntity
 import com.mylosoftworks.kotllms.features.toJson
 import com.mylosoftworks.kotllms.jsonschema.CommonDefs
 import com.mylosoftworks.kotllms.jsonschema.JsonSchemaRule
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
-open class JsonSchemaArray(val items: JsonSchemaRule): JsonSchemaRule() {
+class JsonSchemaArray(val items: JsonSchemaRule): JsonSchemaRule() {
 
     override fun build(): JsonElement {
         return JsonObject(mapOf(
@@ -34,5 +35,23 @@ open class JsonSchemaArray(val items: JsonSchemaRule): JsonSchemaRule() {
         }
         commonDefs.whitespace()
         +"]"
+    }
+
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
+        val jsonArray = (jsonElement ?: JsonArray(listOf()))
+        if (jsonArray is JsonArray) {
+            if (jsonArray.size == 0) return jsonArray to true
+
+            val last = jsonArray.last() // Only check last
+            val entries = jsonArray.dropLast(1).toMutableList()
+            val newLast = items.fillIfMissing(last).first
+
+            if (newLast != null) {
+                entries.add(newLast)
+            }
+            return JsonArray(entries) to true
+        }
+
+        return null to false
     }
 }

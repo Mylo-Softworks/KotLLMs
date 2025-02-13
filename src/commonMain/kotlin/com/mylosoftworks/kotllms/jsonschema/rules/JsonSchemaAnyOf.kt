@@ -29,6 +29,18 @@ class JsonSchemaAnyOf(): JsonSchemaRule() {
         }
     }
 
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
+        items.forEach {
+            val result = it.fillIfMissing(jsonElement)
+
+            if (result.second) {
+                return result
+            }
+        }
+
+        return null to false
+    }
+
     // Functions for adding entries (NOTE: also has similar functions inside of JsonSchemaObject)
     fun addRule(jsonType: JsonSchemaRule) {
         items.add(jsonType)
