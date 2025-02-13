@@ -10,8 +10,6 @@ import kotlinx.serialization.json.JsonObject
 
 open class JsonSchemaArray(val items: JsonSchemaRule): JsonSchemaRule() {
 
-    constructor(schema: JsonType): this(schema.type)
-
     override fun build(): JsonElement {
         return JsonObject(mapOf(
             "type" to "array".toJson(),

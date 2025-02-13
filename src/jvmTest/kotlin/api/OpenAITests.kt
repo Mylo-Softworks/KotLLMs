@@ -130,7 +130,7 @@ class OpenAITests {
 
     @Test
     fun testSchemaResponse() {
-        val schema = JsonSchema("Simple boolean", "Contains a single boolean, and nothing more.", JsonType.Boolean)
+        val schema = JsonSchema("Simple boolean", "Contains a single boolean, and nothing more.", JsonType.Boolean())
 
         val exampleChat = api.createChat {
             createMessage {
@@ -149,8 +149,8 @@ class OpenAITests {
     @Test
     fun testSchemaResponseStreamed() {
         val schema = JsonSchema("Boolean list", "Contains a list of booleans, and a description for the task.", JsonSchemaObject {
-            addType("Interesting cat fact", JsonType.String) // string
-            addTypeArray("List", JsonType.Boolean) // bool[]
+            addRule("Interesting cat fact", JsonType.String()) // string
+            addRuleArray("List", JsonType.Boolean()) // bool[]
         })
 
         val exampleChat = api.createChat {

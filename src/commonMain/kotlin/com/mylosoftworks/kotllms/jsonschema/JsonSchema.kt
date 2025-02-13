@@ -2,15 +2,12 @@ package com.mylosoftworks.kotllms.jsonschema
 
 import com.mylosoftworks.gbnfkotlin.GBNF
 import com.mylosoftworks.kotllms.features.toJson
-import com.mylosoftworks.kotllms.jsonschema.rules.JsonType
 import kotlinx.serialization.json.JsonObject
 
 /**
  * A class used to build json schemas, and parsing them.
  */
 class JsonSchema(val name: String, val description: String? = null, val schema: JsonSchemaRule) {
-
-    constructor(name: String, description: String? = null, schema: JsonType): this(name, description, schema.type)
 
     /**
      * (Examples are in pseudocode)
@@ -57,7 +54,13 @@ class JsonSchema(val name: String, val description: String? = null, val schema: 
     fun buildGBNF() = GBNF{
         val whiteSpace = "whitespace" {
             anyCount {
-                -" \t\n\r"
+                +" "
+            }
+            optional {
+                +"\n"
+                anyCount {
+                    +" "
+                }
             }
         }
         val string = "string" {
@@ -103,6 +106,8 @@ class JsonSchema(val name: String, val description: String? = null, val schema: 
                 oneOrMore { -"0-9" }
             }
         }
+        whiteSpace()
         schema.buildGBNF(this, CommonDefs(whiteSpace, string, boolean, nullVal, integer, number))
+        whiteSpace()
     }
 }

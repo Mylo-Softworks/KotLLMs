@@ -9,13 +9,14 @@ class JsonSchemaTests {
     @Test
     fun testBasicJsonSchema() {
         val schema = JsonSchema("name", schema = JsonSchemaObject {
-            addType("string", JsonType.String)
+            addRule("string", JsonType.String())
             addObject("object") {
-                addTypeArray("array", JsonType.Number)
+                addRuleArray("array", JsonType.Number())
             }
             addObjectArray("array") {
-                addType("name", JsonType.String)
+                addRule("name", JsonType.String())
             }
+            addRule("val 2 (string, bool, or number)", JsonType.Any(true, false, null, "string", 0, 1, 2, 3))
         })
 
         println(schema.build())
@@ -24,13 +25,14 @@ class JsonSchemaTests {
     @Test
     fun testSchemaGrammar() {
         val schema = JsonSchema("name", schema = JsonSchemaObject {
-            addType("string", JsonType.String)
+            addRule("string", JsonType.String())
             addObject("object") {
-                addTypeArray("array", JsonType.Number)
+                addRuleArray("array", JsonType.Number())
             }
             addObjectArray("array") {
-                addType("name", JsonType.String)
+                addRule("name", JsonType.String())
             }
+            addRule("val 2 (string, bool, or number)", JsonType.Any(true, false, null, "string", 0, 1, 2, 3))
         })
 
         println(schema.buildGBNF().compile())

@@ -28,8 +28,8 @@ class JsonSchemaAnyOf(): JsonSchemaRule() {
     }
 
     // Functions for adding entries (NOTE: also has similar functions inside of JsonSchemaObject)
-    fun addType(jsonType: JsonType) {
-        items.add(jsonType.type)
+    fun addRule(jsonType: JsonSchemaRule) {
+        items.add(jsonType)
     }
 
     fun addAnyOf(block: JsonSchemaAnyOf.() -> Unit) {
@@ -40,13 +40,8 @@ class JsonSchemaAnyOf(): JsonSchemaRule() {
         items.add(JsonSchemaObject().apply(block))
     }
 
-
     fun addRuleArray(content: JsonSchemaRule) {
         items.add(JsonSchemaArray(content))
-    }
-
-    fun addTypeArray(content: JsonType) {
-        items.add(JsonSchemaArray(content.type))
     }
 
     fun addObjectArray(block: JsonSchemaObject.() -> Unit) {

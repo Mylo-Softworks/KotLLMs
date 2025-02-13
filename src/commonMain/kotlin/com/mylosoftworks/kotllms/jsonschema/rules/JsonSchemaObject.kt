@@ -19,13 +19,13 @@ class JsonSchemaObject(): JsonSchemaRule() {
         block()
     }
 
-    val properties = hashMapOf<String, JsonSchemaRule>()
+    val properties = linkedMapOf<String, JsonSchemaRule>()
     val required = mutableListOf<String>()
     @JsName("additionalPropertiesProp")
     var additionalProperties: Union<JsonSchemaRule, Boolean> = false.toUnion2()
 
     override fun build(): JsonElement {
-        return JsonObject(mapOf(
+        return JsonObject(linkedMapOf(
             "type" to "object".toJson(),
             "properties" to properties.mapValues { it.value.build() }.toJson(),
             "required" to required.toJson(),
@@ -34,72 +34,63 @@ class JsonSchemaObject(): JsonSchemaRule() {
     }
 
     override fun GBNFEntity.buildGBNF(commonDefs: CommonDefs) {
-        +"{"
-        val valsMapped = properties.map {(key, value) ->
-            (key in required) to (this.host ?: this as GBNF).entity {
-                commonDefs.whitespace()
-                +"\""
-                +key
-                +"\":"
-                commonDefs.whitespace()
-                value.buildGBNF(this, commonDefs)
-                commonDefs.whitespace()
-            }
-        }
-        var first = true
-        valsMapped.forEach {
-            if (!first) +","
-            first = false
-
-            if (it.first) {
-                it.second()
-            }
-            else {
-                optional {
-                    it.second()
-                }
-            }
-        }
-        commonDefs.whitespace()
-        +"}"
-//        val keys = properties.keys
-//        keys.forEachIndexed {idx, key ->
-//            val value = properties[key]!!
-//            val couldBeLast = keys.drop(idx+1).find { it in required } == null
-//            val isLast = idx == keys.size - 1
-//
-//            commonDefs.whitespace()
-//            if (key in required) {
+//        +"{"
+//        val valsMapped = properties.map {(key, value) ->
+//            (key in required) to (this.host ?: this as GBNF).entity {
+//                commonDefs.whitespace()
 //                +"\""
 //                +key
 //                +"\":"
 //                commonDefs.whitespace()
 //                value.buildGBNF(this, commonDefs)
 //                commonDefs.whitespace()
-//                if (couldBeLast) {
-//                    optional { +",O" }
-//                }
-//                else if (!isLast) {
-//                    +",R"
-//                }
+//            }
+//        }
+//        var first = true
+//        valsMapped.forEach {
+//            if (!first) +","
+//            first = false
+//
+//            if (it.first) {
+//                it.second()
 //            }
 //            else {
 //                optional {
-//                    +"\""
-//                    +key
-//                    +"\":"
-//                    commonDefs.whitespace()
-//                    value.buildGBNF(this, commonDefs)
-//                    commonDefs.whitespace()
-//                    if (couldBeLast) {
-//                        optional { +"," }
-//                    }
-//                    else if (!isLast) {
-//                        +","
-//                    }
+//                    it.second()
 //                }
 //            }
 //        }
+//        commonDefs.whitespace()
+//        +"}"
+        +"{"
+        var first = true
+        properties.forEach {(key, value) ->
+            if (!first) +","
+            first = false
+
+            if (key in required) {
+                commonDefs.whitespace()
+                +"\""
+                +key
+                +"\":"
+                commonDefs.whitespace()
+                value.buildGBNF(this, commonDefs)
+//                commonDefs.whitespace()
+            }
+            else {
+                optional {
+                    commonDefs.whitespace()
+                    +"\""
+                    +key
+                    +"\":"
+                    commonDefs.whitespace()
+                    value.buildGBNF(this, commonDefs)
+//                    commonDefs.whitespace()
+                }
+            }
+        }
+        commonDefs.whitespace()
+        +"}"
     }
 
     fun add(name: String, value: JsonSchemaRule, required: Boolean = true) {
@@ -122,8 +113,8 @@ class JsonSchemaObject(): JsonSchemaRule() {
     }
 
     // Functions for adding entries (NOTE: also has similar functions inside of JsonSchemaArray)
-    fun addType(name: String, jsonType: JsonType, required: Boolean = true) {
-        add(name, jsonType.type, required)
+    fun addRule(name: String, jsonType: JsonSchemaRule, required: Boolean = true) {
+        add(name, jsonType, required)
     }
 
     fun addAnyOf(name: String, required: Boolean = true, block: JsonSchemaAnyOf.() -> Unit) {
@@ -136,10 +127,6 @@ class JsonSchemaObject(): JsonSchemaRule() {
 
     fun addRuleArray(name: String, content: JsonSchemaRule, required: Boolean = true) {
         add(name, JsonSchemaArray(content), required)
-    }
-
-    fun addTypeArray(name: String, content: JsonType, required: Boolean = true) {
-        add(name, JsonSchemaArray(content.type), required)
     }
 
     fun addObjectArray(name: String, required: Boolean = true, block: JsonSchemaObject.() -> Unit) {
