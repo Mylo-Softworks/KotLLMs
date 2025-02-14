@@ -140,7 +140,9 @@ object JsonPatcher {
         // Define element
         element = define {
             ws()
-            oneOf(string, number, bool, nullJson, array, obj)
+            Optional { // Might be completely empty, in which case, the end result should just be null
+                oneOf(string, number, bool, nullJson, array, obj)
+            }
             ws()
         }
 
@@ -153,8 +155,8 @@ object JsonPatcher {
      * Parses an incomplete json object, this allows for parsing partial json values as JsonObject.
      * Additionally, missing required keys can be added to match a json schema.
      */
-    fun parseIncompleteJson(json: String): JsonElement {
-        return jsonParser.parse(json).getOrThrow().firstFlatValue()!!
+    fun parseIncompleteJson(json: String): JsonElement? {
+        return jsonParser.parse(json).getOrThrow().firstFlatValue()
     }
 
     fun patchToMatchSchema(json: String, schema: JsonSchema) = patchToMatchSchema(json, schema.schema)

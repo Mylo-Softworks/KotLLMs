@@ -1,8 +1,8 @@
 package schemas
 
-import com.mylosoftworks.kotllms.jsonschema.JsonSchemaRule
 import com.mylosoftworks.kotllms.jsonschema.jsonpatcher.JsonPatcher
 import com.mylosoftworks.kotllms.jsonschema.rules.*
+import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -148,5 +148,37 @@ class JsonPatcherTests {
 
         val json = JsonPatcher.patchToMatchSchema(incompleteJson, testSchema4)
         assertEquals(compareJson, json.toString())
+    }
+
+    // Full tests
+    @Test
+    fun testFullParse() {
+        val json = """
+            {"list":[0,1,2,3,4,5],"object":{"key":"string"}}
+        """.trimIndent()
+
+        repeat(json.length) {
+            val subString = json.substring(0, it)
+            println(JsonPatcher.parseIncompleteJson(subString))
+        }
+    }
+
+    val fullPatchSchema = JsonSchemaObject {
+        addRuleArray("list", JsonType.Number())
+        addObject("object") {
+            addRule("key", JsonType.String())
+        }
+    }
+
+    @Test
+    fun testFullPatchSchema() {
+        val json = """
+            {"list":[0,1,2,3,4,5],"object":{"key":"string"}}
+        """.trimIndent()
+
+        repeat(json.length) {
+            val subString = json.substring(0, it)
+            println(JsonPatcher.patchToMatchSchema(subString, fullPatchSchema))
+        }
     }
 }

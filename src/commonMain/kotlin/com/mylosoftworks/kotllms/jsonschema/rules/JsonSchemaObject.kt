@@ -97,7 +97,6 @@ class JsonSchemaObject(): JsonSchemaRule() {
         if (jsonObject is JsonObject) {
             val hasInvalidKeys = (jsonObject.keys.find { it !in properties.keys } != null) && (additionalProperties.second == false)
             val missingKeys = required.filter { it !in jsonObject.keys }
-            if (missingKeys.isEmpty()) return jsonObject to true
 
             var atLeastOneFalse = false
             val currentEntries = jsonObject.entries.map {(k, v) -> k to (properties[k]?.fillIfMissing(v)?.also { if (!it.second) atLeastOneFalse = true }?.first ?: v)}.toMutableList()
