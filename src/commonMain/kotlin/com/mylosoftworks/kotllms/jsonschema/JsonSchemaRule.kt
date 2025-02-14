@@ -25,9 +25,9 @@ abstract class JsonSchemaRule: ToJson {
     /**
      * Function used to fill in missing values.
      *
-     * @return A pair with a filled json element, and a boolean indicating whether it was possible based on the provided keys.
+     * @return A pair with a filled json element, and an int indicating wrongness, lower is more correct.
      */
-    abstract fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean>
+    abstract fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Int>
 }
 
 /**

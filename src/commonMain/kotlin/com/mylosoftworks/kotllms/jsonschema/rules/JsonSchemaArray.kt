@@ -37,21 +37,22 @@ class JsonSchemaArray(val items: JsonSchemaRule): JsonSchemaRule() {
         +"]"
     }
 
-    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Int> {
         val jsonArray = (jsonElement ?: JsonArray(listOf()))
         if (jsonArray is JsonArray) {
-            if (jsonArray.size == 0) return jsonArray to true
+            if (jsonArray.size == 0) return jsonArray to 0
 
             val last = jsonArray.last() // Only check last
             val entries = jsonArray.dropLast(1).toMutableList()
-            val newLast = items.fillIfMissing(last).first
+            val newLast = items.fillIfMissing(last)
+            val first = newLast.first
 
-            if (newLast != null) {
-                entries.add(newLast)
+            if (first != null) {
+                entries.add(first)
             }
-            return JsonArray(entries) to true
+            return JsonArray(entries) to newLast.second
         }
 
-        return null to false
+        return null to 99999
     }
 }

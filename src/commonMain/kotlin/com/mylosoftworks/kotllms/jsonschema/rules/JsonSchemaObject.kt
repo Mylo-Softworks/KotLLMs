@@ -92,22 +92,22 @@ class JsonSchemaObject(): JsonSchemaRule() {
         +"}"
     }
 
-    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Int> {
         val jsonObject = (jsonElement ?: JsonObject(mapOf()))
         if (jsonObject is JsonObject) {
-            val hasInvalidKeys = (jsonObject.keys.find { it !in properties.keys } != null) && (additionalProperties.second == false)
+            val invalidKeyCount = if (additionalProperties.second == false) jsonObject.keys.count { it !in properties.keys } else 0
             val missingKeys = required.filter { it !in jsonObject.keys }
 
-            var atLeastOneFalse = false
-            val currentEntries = jsonObject.entries.map {(k, v) -> k to (properties[k]?.fillIfMissing(v)?.also { if (!it.second) atLeastOneFalse = true }?.first ?: v)}.toMutableList()
+            var itemsWrongNess = 0
+            val currentEntries = jsonObject.entries.map {(k, v) -> k to (properties[k]?.fillIfMissing(v)?.also { itemsWrongNess += it.second }?.first ?: v)}.toMutableList()
             missingKeys.forEach {key ->
-                properties[key]?.fillIfMissing(null)?.also { if (!it.second) atLeastOneFalse = true }?.first?.let { currentEntries.add(key to it) }
+                properties[key]?.fillIfMissing(null)?.also { itemsWrongNess += it.second }?.first?.let { currentEntries.add(key to it) }
             }
 
-            return JsonObject(mapOf(*currentEntries.toTypedArray())) to (!hasInvalidKeys && !atLeastOneFalse)
+            return JsonObject(mapOf(*currentEntries.toTypedArray())) to (invalidKeyCount + itemsWrongNess)
         }
 
-        return null to false // Unsuccessful attempt, with no value
+        return null to 99999 // Unsuccessful attempt, with no value
     }
 
     fun add(name: String, value: JsonSchemaRule, required: Boolean = true) {

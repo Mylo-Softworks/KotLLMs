@@ -17,7 +17,7 @@ class JsonSchemaJsonElement(val element: JsonElement, val gbnf: GBNFEntity.() ->
         gbnf()
     }
 
-    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
-        return jsonElement to true
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Int> {
+        return jsonElement to 0
     }
 }

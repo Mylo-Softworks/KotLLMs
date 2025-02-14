@@ -30,14 +30,14 @@ sealed class JsonSchemaType(val type: String?, val default: JsonElement, val all
         }
     }
 
-    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Boolean> {
+    override fun fillIfMissing(jsonElement: JsonElement?): Pair<JsonElement?, Int> {
         if (allowedValues.isNullOrEmpty()) {
-            if (jsonElement != null) return jsonElement to true
-            return default to true
+            if (jsonElement != null) return jsonElement to 0
+            return default to 0
         }
         else {
             if (jsonElement == null) {
-                return allowedValues[0].toJson() to true
+                return allowedValues[0].toJson() to 0
             }
             else {
                 // Try to fill
@@ -45,14 +45,14 @@ sealed class JsonSchemaType(val type: String?, val default: JsonElement, val all
                     val strVal = jsonElement.stringOrToString()
                     val match = allowedValues.find { it.toString().startsWith(strVal) }
                     if (match == null) {
-                        return allowedValues[0].toJson() to (strVal in allowedValues)
+                        return allowedValues[0].toJson() to (if(strVal in allowedValues) 0 else 1)
                     }
-                    return match.toJson() to true
+                    return match.toJson() to 0
                 }
             }
         }
 
-        return null to false
+        return null to 99999
     }
 }
 

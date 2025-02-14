@@ -111,13 +111,16 @@ object JsonPatcher {
             ws()
             val key = string().getOrElse { return@defineR null }.first.value?.jsonPrimitive?.content ?: return@defineR null
             ws()
-            +":"
-            ws()
-            val value = element().getOrElse { return@defineR null }.first.firstFlatValue() ?: return@defineR null
-            ws()
-
-//            treeValue = (mapOf(key to value))
-            return@defineR key to value
+            var returnVal: Pair<String, JsonElement>? = null
+            Optional {
+                +":"
+                ws()
+                val value = element().getOrNull()?.first?.firstFlatValue()
+                ws()
+                //            treeValue = (mapOf(key to value))
+                if (value != null) returnVal = key to value
+            }
+            return@defineR returnVal
         }
         val obj = define {
             +"{"

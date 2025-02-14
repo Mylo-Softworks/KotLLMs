@@ -151,6 +151,13 @@ class JsonPatcherTests {
     }
 
     // Full tests
+    val fullPatchSchema = JsonSchemaObject {
+        addRuleArray("list", JsonType.Number())
+        addObject("object") {
+            addRule("key", JsonType.String())
+        }
+    }
+
     @Test
     fun testFullParse() {
         val json = """
@@ -163,13 +170,6 @@ class JsonPatcherTests {
         }
     }
 
-    val fullPatchSchema = JsonSchemaObject {
-        addRuleArray("list", JsonType.Number())
-        addObject("object") {
-            addRule("key", JsonType.String())
-        }
-    }
-
     @Test
     fun testFullPatchSchema() {
         val json = """
@@ -179,6 +179,41 @@ class JsonPatcherTests {
         repeat(json.length) {
             val subString = json.substring(0, it)
             println(JsonPatcher.patchToMatchSchema(subString, fullPatchSchema))
+        }
+    }
+
+    val fullPatchSchema2 = JsonSchemaArray(JsonSchemaAnyOf {
+        addObject {
+            addRule("type", JsonType.String("string"))
+            addRule("string", JsonType.String())
+        }
+        addObject {
+            addRule("type", JsonType.String("number"))
+            addRule("number", JsonType.Number())
+        }
+    })
+
+    @Test
+    fun testFullParse2() {
+        val json = """
+            [{"type":"string","string":"value"},{"number":50,"type":"number"}]
+        """.trimIndent()
+
+        repeat(json.length) {
+            val subString = json.substring(0, it)
+            println(subString + ", " + JsonPatcher.parseIncompleteJson(subString))
+        }
+    }
+
+    @Test
+    fun testFullPatchSchema2() {
+        val json = """
+            [{"type":"string","string":"value"},{"number":50,"type":"number"}]
+        """.trimIndent()
+
+        repeat(json.length) {
+            val subString = json.substring(0, it)
+            println(JsonPatcher.patchToMatchSchema(subString, fullPatchSchema2))
         }
     }
 }
